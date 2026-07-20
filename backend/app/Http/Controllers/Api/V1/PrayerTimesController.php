@@ -29,7 +29,15 @@ class PrayerTimesController extends Controller
             'timeline' => $today->times,
             'announcements' => ScreenContent::currentlyActive()
                 ->orderBy('sort_order')
-                ->get(['type', 'title', 'body', 'media_path']),
+                ->get(['type', 'title', 'body', 'media_path'])
+                ->map(fn (ScreenContent $content) => [
+                    'type' => $content->type,
+                    'title' => $content->title,
+                    'body' => $content->body,
+                    'media_path' => $content->media_path && ! str_starts_with($content->media_path, 'http')
+                        ? url('/'.ltrim($content->media_path, '/'))
+                        : $content->media_path,
+                ]),
             'synced_at' => now()->toIso8601String(),
         ]);
     }

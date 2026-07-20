@@ -6,7 +6,7 @@
     <form method="POST" action="{{ $content->exists ? route('admin.masjids.contents.update', [$masjid, $content]) : route('admin.masjids.contents.store', $masjid) }}">
         @csrf @if($content->exists) @method('PUT') @endif
         <div class="form-grid">
-            <div class="field"><label for="type">Content type</label><select id="type" name="type" required>@foreach(['announcement'=>'Announcement','ticker'=>'Running ticker','slide'=>'Slide','image'=>'Image'] as $value => $label)<option value="{{ $value }}" @selected(old('type', $content->type ?: 'announcement') === $value)>{{ $label }}</option>@endforeach</select></div>
+            <div class="field"><label for="type">Content type</label><select id="type" name="type" required>@foreach(['announcement'=>'Announcement','schedule'=>'Ustaz schedule','ticker'=>'Running ticker','slide'=>'Slide','image'=>'Image'] as $value => $label)<option value="{{ $value }}" @selected(old('type', $content->type ?: 'announcement') === $value)>{{ $label }}</option>@endforeach</select></div>
             <div class="field"><label for="title">Title</label><input id="title" name="title" value="{{ old('title', $content->title) }}" maxlength="150"></div>
             <div class="field full"><label for="body">Message / description</label><textarea id="body" name="body" maxlength="2000">{{ old('body', $content->body) }}</textarea></div>
             <div class="field full"><label for="media_path">Media URL or path</label><input id="media_path" name="media_path" value="{{ old('media_path', $content->media_path) }}" placeholder="https://…"><small>Used for image and slide content.</small></div>

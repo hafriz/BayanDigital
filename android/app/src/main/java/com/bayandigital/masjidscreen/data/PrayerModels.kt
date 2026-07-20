@@ -21,7 +21,8 @@ data class MasjidDto(
     @SerialName("iqamah_minutes") val iqamahMinutes: Map<String, Int> = emptyMap(),
     @SerialName("silent_mode_minutes") val silentModeMinutes: Int = 15,
     @SerialName("screen_theme") val screenTheme: String = "emerald",
-    @SerialName("time_format") val timeFormat: String = "24h"
+    @SerialName("time_format") val timeFormat: String = "24h",
+    @SerialName("logo_url") val logoUrl: String? = null
 )
 
 @Serializable

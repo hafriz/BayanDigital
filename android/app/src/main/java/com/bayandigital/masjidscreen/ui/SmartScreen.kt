@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import com.bayandigital.masjidscreen.BuildConfig
 import com.bayandigital.masjidscreen.data.AnnouncementDto
 import com.bayandigital.masjidscreen.data.PrayerResponse
+import coil.compose.SubcomposeAsyncImage
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -118,11 +120,16 @@ private fun DashboardScreen(
     val prayers = prayerItems(payload)
     val nextPrayer = calculateNextPrayer(prayers, currentTime)
     val displayTime = formatClock(currentTime, payload.masjid.timeFormat)
-    val contents = payload.announcements.filter { it.type != "ticker" }
     val second = parseTime(currentTime)?.second ?: 0
-    val featureIndex = if (contents.isEmpty()) 0 else (second / 10) % contents.size
-    val featured = contents.getOrNull(featureIndex) ?: welcomeContent(payload.masjid.name)
-    val supporting = contents.filterIndexed { index, _ -> index != featureIndex }.take(2)
+    val featuredItems = payload.announcements.filter { it.type == "announcement" }
+    val featureIndex = if (featuredItems.isEmpty()) 0 else (second / 10) % featuredItems.size
+    val featured = featuredItems.getOrNull(featureIndex) ?: welcomeContent(payload.masjid.name)
+    val schedules = payload.announcements.filter { it.type == "schedule" }
+    val schedule = schedules.getOrNull(if (schedules.isEmpty()) 0 else (second / 12) % schedules.size)
+        ?: AnnouncementDto("schedule", "Jadual Ustaz", "Jadual kuliah akan dikemas kini oleh pihak pengurusan.")
+    val visuals = payload.announcements.filter { it.type in listOf("image", "slide") && !it.mediaPath.isNullOrBlank() }
+    val visual = visuals.getOrNull(if (visuals.isEmpty()) 0 else (second / 10) % visuals.size)
+        ?: AnnouncementDto("image", "Maklumat Komuniti", "Media dan poster aktiviti akan dipaparkan di sini.")
     val tickerItems = payload.announcements.filter { it.type == "ticker" }
         .mapNotNull { (it.body ?: it.title)?.trim()?.takeIf(String::isNotEmpty) }
     val tickerIndex = if (tickerItems.isEmpty()) 0 else (second / 12) % tickerItems.size
@@ -157,25 +164,14 @@ private fun DashboardScreen(
                     animationSpec = tween(700),
                     label = "featured-content",
                     modifier = Modifier.weight(1.75f).fillMaxHeight()
-                ) { content -> FeaturedContentCard(content, featureIndex + 1, maxOf(contents.size, 1), palette) }
+                ) { content -> FeaturedContentCard(content, featureIndex + 1, maxOf(featuredItems.size, 1), palette) }
 
                 Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (supporting.isEmpty()) {
-                        CompactContentCard(
-                            AnnouncementDto("announcement", "Adab di rumah Allah", "Jaga kebersihan, rapatkan saf dan hormati jemaah lain."),
-                            palette,
-                            Modifier.weight(1f).fillMaxWidth()
-                        )
-                        CompactContentCard(
-                            AnnouncementDto("slide", "BayanDigital", "Paparan waktu solat pintar untuk komuniti anda."),
-                            palette,
-                            Modifier.weight(1f).fillMaxWidth()
-                        )
-                    } else {
-                        supporting.forEach { content ->
-                            CompactContentCard(content, palette, Modifier.weight(1f).fillMaxWidth())
-                        }
-                        if (supporting.size == 1) Spacer(Modifier.weight(1f))
+                    Crossfade(targetState = schedule, animationSpec = tween(600), label = "ustaz-schedule", modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        ScheduleCard(it, palette)
+                    }
+                    Crossfade(targetState = visual, animationSpec = tween(600), label = "visual-information", modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        VisualContentCard(it, palette)
                     }
                 }
             }
@@ -246,10 +242,7 @@ private fun ConnectionIndicator(
 @Composable
 private fun Masthead(payload: PrayerResponse, displayTime: String, palette: ScreenPalette) {
     Row(Modifier.fillMaxWidth().height(110.dp), verticalAlignment = Alignment.CenterVertically) {
-        Row(Modifier.width(196.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("bayan", color = palette.text, fontSize = 23.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-1.2).sp)
-            Text("Digital", color = palette.accent, fontSize = 23.sp, fontWeight = FontWeight.Black, letterSpacing = (-1.2).sp)
-        }
+        MastheadLogo(payload.masjid.logoUrl, palette)
         Box(Modifier.width(1.dp).height(42.dp).background(palette.text.copy(alpha = .14f)))
         Column(Modifier.padding(start = 20.dp).weight(1f)) {
             Text(
@@ -275,6 +268,35 @@ private fun Masthead(payload: PrayerResponse, displayTime: String, palette: Scre
                 fontWeight = FontWeight.Bold
             )
         }
+    }
+}
+
+@Composable
+private fun MastheadLogo(logoUrl: String?, palette: ScreenPalette) {
+    Box(
+        Modifier.width(196.dp).height(76.dp).padding(end = 20.dp).clip(RoundedCornerShape(16.dp)),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        if (logoUrl.isNullOrBlank()) {
+            DefaultBayanDigitalLogo(palette)
+        } else {
+            SubcomposeAsyncImage(
+                model = logoUrl,
+                contentDescription = "Masjid or surau logo",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+                loading = { DefaultBayanDigitalLogo(palette) },
+                error = { DefaultBayanDigitalLogo(palette) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DefaultBayanDigitalLogo(palette: ScreenPalette) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("bayan", color = palette.text, fontSize = 23.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-1.2).sp)
+        Text("Digital", color = palette.accent, fontSize = 23.sp, fontWeight = FontWeight.Black, letterSpacing = (-1.2).sp)
     }
 }
 
@@ -412,31 +434,82 @@ private fun FeaturedContentCard(content: AnnouncementDto, position: Int, total: 
 }
 
 @Composable
-private fun CompactContentCard(content: AnnouncementDto, palette: ScreenPalette, modifier: Modifier) {
+private fun ScheduleCard(content: AnnouncementDto, palette: ScreenPalette) {
     Column(
-        modifier
+        Modifier.fillMaxSize()
             .clip(RoundedCornerShape(24.dp))
             .background(palette.surface.copy(alpha = .88f))
             .border(1.dp, palette.text.copy(alpha = .08f), RoundedCornerShape(24.dp))
             .padding(18.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        ContentBadge(content.type, palette)
-        Spacer(Modifier.height(9.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            ContentBadge("schedule", palette)
+            Text("MINGGU INI", color = palette.muted, fontSize = 9.sp, fontWeight = FontWeight.Black)
+        }
+        Spacer(Modifier.height(7.dp))
         Text(
-            content.title ?: contentDefaultTitle(content.type),
+            content.title ?: "Jadual Ustaz",
             color = palette.text,
-            fontSize = 20.sp,
-            lineHeight = 23.sp,
+            fontSize = 18.sp,
+            lineHeight = 21.sp,
             fontWeight = FontWeight.ExtraBold,
-            maxLines = 2,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        val body = content.body
-        if (!body.isNullOrBlank()) {
-            Spacer(Modifier.height(5.dp))
-            Text(body, color = palette.muted, fontSize = 14.sp, lineHeight = 19.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(5.dp))
+        Text(
+            content.body.orEmpty(),
+            color = palette.muted,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun VisualContentCard(content: AnnouncementDto, palette: ScreenPalette) {
+    Box(
+        Modifier.fillMaxSize()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Brush.linearGradient(listOf(palette.surfaceAlt, palette.surface)))
+            .border(1.dp, palette.text.copy(alpha = .08f), RoundedCornerShape(24.dp))
+    ) {
+        if (!content.mediaPath.isNullOrBlank()) {
+            SubcomposeAsyncImage(
+                model = content.mediaPath,
+                contentDescription = content.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                loading = { VisualPlaceholder(palette) },
+                error = { VisualPlaceholder(palette) }
+            )
+        } else {
+            VisualPlaceholder(palette)
         }
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, palette.background.copy(alpha = .92f)))))
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(16.dp)) {
+            ContentBadge(content.type, palette)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                content.title ?: contentDefaultTitle(content.type),
+                color = Color.White,
+                fontSize = 18.sp,
+                lineHeight = 21.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun VisualPlaceholder(palette: ScreenPalette) {
+    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(palette.surfaceAlt, palette.backgroundEnd)))) {
+        Canvas(Modifier.align(Alignment.CenterEnd).size(150.dp)) { drawIslamicStar(palette.accent.copy(alpha = .13f)) }
     }
 }
 
@@ -534,12 +607,14 @@ private fun formatCountdown(seconds: Long): String {
 private fun countdownProgress(seconds: Long): Float = (1f - (seconds.coerceAtMost(14_400).toFloat() / 14_400f)).coerceIn(.08f, 1f)
 
 private fun contentTypeLabel(type: String): String = when (type) {
+    "schedule" -> "JADUAL USTAZ"
     "slide" -> "MAKLUMAT"
     "image" -> "GALERI"
     else -> "PENGUMUMAN"
 }
 
 private fun contentDefaultTitle(type: String): String = when (type) {
+    "schedule" -> "Jadual ustaz"
     "slide" -> "Maklumat komuniti"
     "image" -> "Galeri masjid"
     else -> "Pengumuman terkini"

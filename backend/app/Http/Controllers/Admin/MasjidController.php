@@ -53,6 +53,7 @@ class MasjidController extends Controller
             'silent_mode_minutes' => ['required', 'integer', 'min:0', 'max:120'],
             'screen_theme' => ['required', Rule::in(['emerald', 'midnight', 'sand', 'royal'])],
             'time_format' => ['required', Rule::in(['24h', '12h'])],
+            'logo_url' => ['nullable', 'url:http,https', 'max:255'],
         ]);
 
         $masjid->update($validated);

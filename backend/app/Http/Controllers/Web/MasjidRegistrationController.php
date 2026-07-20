@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\MosqueSetting;
+use App\Services\DefaultScreenContentService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class MasjidRegistrationController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, DefaultScreenContentService $defaultContent): RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
@@ -45,6 +46,8 @@ class MasjidRegistrationController extends Controller
                 'isyak' => 10,
             ],
         ]);
+
+        $defaultContent->seed($masjid);
 
         return redirect()->route('masjids.registered', $masjid->public_id);
     }

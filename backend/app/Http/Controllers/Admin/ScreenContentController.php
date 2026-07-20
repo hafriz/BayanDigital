@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 class ScreenContentController extends Controller
 {
-    private const TYPES = ['announcement', 'ticker', 'slide', 'image'];
+    private const TYPES = ['announcement', 'schedule', 'ticker', 'slide', 'image'];
 
     public function index(Request $request, MosqueSetting $masjid): View
     {

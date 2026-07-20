@@ -7,6 +7,7 @@
 @php
     $categories = [
         'announcement' => ['Announcements', 'Important messages shown as information cards.', '▣'],
+        'schedule' => ['Ustaz schedules', 'Weekly teachers, classes, and lecture times.', '◷'],
         'ticker' => ['Running ticker', 'Short messages moving along the bottom of the TV.', '→'],
         'slide' => ['Slides', 'Rotating campaign, programme, or event panels.', '▤'],
         'image' => ['Images', 'Visual posters and remotely hosted media.', '▧'],

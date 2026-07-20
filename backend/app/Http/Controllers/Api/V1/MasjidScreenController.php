@@ -72,6 +72,7 @@ class MasjidScreenController extends Controller
                 'silent_mode_minutes' => $settings->silent_mode_minutes,
                 'screen_theme' => $settings->screen_theme ?: 'emerald',
                 'time_format' => $settings->time_format ?: '24h',
+                'logo_url' => $this->publicUrl($settings->logo_url),
             ],
             'date' => [
                 'gregorian' => $today->prayer_date->toDateString(),
@@ -81,9 +82,26 @@ class MasjidScreenController extends Controller
             'announcements' => ScreenContent::currentlyActive()
                 ->where(fn ($query) => $query->whereNull('mosque_setting_id')->orWhere('mosque_setting_id', $settings->id))
                 ->orderBy('sort_order')
-                ->get(['type', 'title', 'body', 'media_path']),
+                ->get(['type', 'title', 'body', 'media_path'])
+                ->map(fn (ScreenContent $content) => [
+                    'type' => $content->type,
+                    'title' => $content->title,
+                    'body' => $content->body,
+                    'media_path' => $this->publicUrl($content->media_path),
+                ]),
             'android' => config('android'),
             'synced_at' => now()->toIso8601String(),
         ]);
+    }
+
+    private function publicUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        return str_starts_with($path, 'http://') || str_starts_with($path, 'https://')
+            ? $path
+            : url('/'.ltrim($path, '/'));
     }
 }
