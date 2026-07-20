@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ScreenContent extends Model
 {
@@ -20,5 +21,10 @@ class ScreenContent extends Model
         return $query->where('is_active', true)
             ->where(fn (Builder $q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
             ->where(fn (Builder $q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()));
+    }
+
+    public function mosqueSetting(): BelongsTo
+    {
+        return $this->belongsTo(MosqueSetting::class);
     }
 }

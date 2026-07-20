@@ -45,6 +45,9 @@ fi
 echo "Running migrations..."
 php "${APP_DIR}/artisan" migrate --force 2>&1 || echo "Warning: migration issue (non-fatal)"
 
+echo "Ensuring initial administrator exists..."
+php "${APP_DIR}/artisan" db:seed --class=AdminUserSeeder --force 2>&1 || echo "Warning: administrator seed issue (non-fatal)"
+
 # ── Cache config ──────────────────────────────────────────────────────────────
 php "${APP_DIR}/artisan" config:cache 2>/dev/null || true
 php "${APP_DIR}/artisan" route:cache 2>/dev/null || true

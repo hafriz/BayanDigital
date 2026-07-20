@@ -89,6 +89,7 @@
         <nav class="nav">
             <a href="{{ route('masjids.register') }}">Register</a>
             <a href="{{ route('android.download') }}">Android App</a>
+            <a href="{{ route('admin.dashboard') }}">Admin</a>
         </nav>
     </header>
 

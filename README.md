@@ -67,3 +67,15 @@ updates the rolling `android-tv-latest` GitHub release, then the local runner
 embeds the APK into the application image and deploys it to Kubernetes. Regular
 backend deployments also download that release first, ensuring the public APK
 remains available after website-only changes.
+
+## Backend Management Console
+
+The management console is available at `/admin/login`. Administrators can
+manage user accounts, roles, registrations, masjid settings, and TV content.
+Operators can manage masjids and TV content but cannot manage user accounts.
+
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the `bayandigital-secrets` Kubernetes
+secret before the first deployment. The startup seeder creates the first admin
+only when that email does not already exist, so later deployments do not reset
+an administrator's password. Change the temporary password from the Users page
+after signing in.

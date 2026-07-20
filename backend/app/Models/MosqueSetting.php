@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
 
 class MosqueSetting extends Model
@@ -26,4 +27,9 @@ class MosqueSetting extends Model
         'iqamah_minutes' => 'array',
         'silent_mode_minutes' => 'integer',
     ];
+
+    public function screenContents(): HasMany
+    {
+        return $this->hasMany(ScreenContent::class);
+    }
 }
