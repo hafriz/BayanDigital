@@ -11,11 +11,11 @@ class PrayerRepository(
     private val prefs: SharedPreferences,
     private val json: Json = Json { ignoreUnknownKeys = true }
 ) {
-    suspend fun sync(masjidId: String): PrayerResponse {
+    suspend fun sync(masjidId: String, deviceToken: String): PrayerResponse {
         val normalizedId = masjidId.trim().uppercase()
 
         return runCatching {
-            api.screenPayload(normalizedId).also { response ->
+            api.screenPayload(normalizedId, "Bearer $deviceToken").also { response ->
                 prefs.edit().putString(cacheKey(normalizedId), json.encodeToString(response)).apply()
             }
         }.getOrElse { error ->

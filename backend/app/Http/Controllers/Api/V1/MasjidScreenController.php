@@ -5,13 +5,27 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\MosqueSetting;
 use App\Models\ScreenContent;
+use App\Models\ScreenDevice;
 use App\Services\JakimPrayerTimeService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class MasjidScreenController extends Controller
 {
-    public function show(string $publicId, JakimPrayerTimeService $service): JsonResponse
+    public function show(Request $request, string $publicId, JakimPrayerTimeService $service): JsonResponse
     {
+        $token = $request->bearerToken();
+        $device = is_string($token) && $token !== ''
+            ? ScreenDevice::query()->where('token_hash', hash('sha256', $token))->first()
+            : null;
+
+        if (! $device?->isUsable()) {
+            return response()->json([
+                'message' => 'This TV is not paired. Ask an administrator to approve the device.',
+                'code' => 'DEVICE_NOT_PAIRED',
+            ], 401);
+        }
+
         $settings = MosqueSetting::query()
             ->where('public_id', strtoupper($publicId))
             ->first();
@@ -33,6 +47,17 @@ class MasjidScreenController extends Controller
                 },
                 'code' => 'MASJID_'.strtoupper($settings->status),
             ], 403);
+        }
+
+        if ($device->mosque_setting_id !== $settings->id) {
+            return response()->json([
+                'message' => 'This device is paired to a different masjid or surau.',
+                'code' => 'DEVICE_MASJID_MISMATCH',
+            ], 403);
+        }
+
+        if ($device->last_seen_at === null || $device->last_seen_at->lt(now()->subMinutes(5))) {
+            $device->update(['last_seen_at' => now()]);
         }
 
         $today = $service->today($settings->zone_code, $settings->prayer_offsets ?? []);

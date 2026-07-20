@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\MasjidController as AdminMasjidController;
 use App\Http\Controllers\Admin\ScreenContentController as AdminScreenContentController;
+use App\Http\Controllers\Admin\ScreenDeviceController as AdminScreenDeviceController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Web\AndroidDownloadController;
 use App\Http\Controllers\Web\LandingPageController;
@@ -27,6 +28,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', AdminDashboardController::class)->name('dashboard');
         Route::resource('masjids', AdminMasjidController::class)->only(['index', 'edit', 'update']);
         Route::resource('masjids.contents', AdminScreenContentController::class)->except(['show']);
+        Route::middleware('admin')->group(function () {
+            Route::get('masjids/{masjid}/devices', [AdminScreenDeviceController::class, 'index'])->name('masjids.devices.index');
+            Route::post('masjids/{masjid}/devices/{device}/approve', [AdminScreenDeviceController::class, 'approve'])->name('masjids.devices.approve');
+            Route::post('masjids/{masjid}/devices/{device}/reject', [AdminScreenDeviceController::class, 'reject'])->name('masjids.devices.reject');
+            Route::post('masjids/{masjid}/devices/{device}/revoke', [AdminScreenDeviceController::class, 'revoke'])->name('masjids.devices.revoke');
+        });
         Route::middleware('admin')->resource('users', AdminUserController::class)->except(['show']);
     });
 });

@@ -1,7 +1,7 @@
 @extends('admin.layout')
 @section('title', 'Masjid settings')
 @section('subtitle', $masjid->name.' · '.$masjid->public_id)
-@section('top-action')<a class="button" href="{{ route('admin.masjids.contents.index', $masjid) }}">Manage TV content</a>@endsection
+@section('top-action')<div class="actions-inline">@if(auth()->user()->isAdmin())<a class="button secondary" href="{{ route('admin.masjids.devices.index', $masjid) }}">Paired TVs</a>@endif<a class="button" href="{{ route('admin.masjids.contents.index', $masjid) }}">Manage TV content</a></div>@endsection
 @section('content')
 <section class="panel"><div class="panel-body">
     <form method="POST" action="{{ route('admin.masjids.update', $masjid) }}">@csrf @method('PUT')

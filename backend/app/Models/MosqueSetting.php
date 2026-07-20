@@ -32,4 +32,9 @@ class MosqueSetting extends Model
     {
         return $this->hasMany(ScreenContent::class);
     }
+
+    public function screenDevices(): HasMany
+    {
+        return $this->hasMany(ScreenDevice::class);
+    }
 }

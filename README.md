@@ -74,6 +74,13 @@ The management console is available at `/admin/login`. Administrators can
 manage user accounts, roles, registrations, masjid settings, and TV content.
 Operators can manage masjids and TV content but cannot manage user accounts.
 
+Android TVs use administrator-approved device pairing. The public masjid ID is
+only an identifier: a TV searches for an approved location, displays a
+time-limited six-digit pairing code, and receives a private device token only
+after an administrator approves the matching request under **Paired TVs**.
+Screen API requests without an active token are rejected, and administrators
+can revoke a TV immediately.
+
 Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the `bayandigital-secrets` Kubernetes
 secret before the first deployment. The startup seeder creates the first admin
 only when that email does not already exist, so later deployments do not reset

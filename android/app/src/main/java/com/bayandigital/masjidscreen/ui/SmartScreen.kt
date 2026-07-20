@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bayandigital.masjidscreen.BuildConfig
 import com.bayandigital.masjidscreen.data.PrayerResponse
 
 sealed interface ScreenState {
@@ -61,7 +62,16 @@ private fun IdleScreen(payload: PrayerResponse, currentTime: String) {
             PrayerCell("Isyak", payload.timeline.isyak)
         }
         Spacer(Modifier.weight(1f))
-        Text(payload.announcements.joinToString("   •   ") { it.body ?: it.title.orEmpty() }, color = Color.White, fontSize = 30.sp, maxLines = 1)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                payload.announcements.joinToString("   •   ") { it.body ?: it.title.orEmpty() },
+                modifier = Modifier.weight(1f),
+                color = Color.White,
+                fontSize = 30.sp,
+                maxLines = 1
+            )
+            Text("v${BuildConfig.VERSION_NAME}", color = Color(0xFF86A9A1), fontSize = 15.sp)
+        }
     }
 }
 
