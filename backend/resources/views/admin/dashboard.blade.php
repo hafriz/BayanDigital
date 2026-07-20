@@ -23,4 +23,18 @@
         </tbody></table></div>
     @endif
 </section>
+<section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:26px;">
+    <a href="{{ route('admin.manual') }}" style="display:flex;align-items:center;gap:14px;padding:20px 22px;border:1px solid var(--line);border-radius:16px;background:white;text-decoration:none;color:var(--ink);box-shadow:0 12px 35px rgba(7,24,39,.04);transition:.15s;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:12px;background:rgba(15,118,110,.08);font-size:22px;flex-shrink:0;">📖</span>
+        <div><strong style="display:block;font-size:16px;">User Manual</strong><span style="color:var(--muted);font-size:13px;">Learn how to manage your masjid screens</span></div>
+    </a>
+    <a href="mailto:support@rarecreation.xyz" style="display:flex;align-items:center;gap:14px;padding:20px 22px;border:1px solid var(--line);border-radius:16px;background:white;text-decoration:none;color:var(--ink);box-shadow:0 12px 35px rgba(7,24,39,.04);transition:.15s;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:12px;background:rgba(15,118,110,.08);font-size:22px;flex-shrink:0;">✉</span>
+        <div><strong style="display:block;font-size:16px;">Need Help?</strong><span style="color:var(--muted);font-size:13px;">support@rarecreation.xyz</span></div>
+    </a>
+    <a href="https://buymeacoffee.com/rarecreation" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:14px;padding:20px 22px;border:1px solid var(--line);border-radius:16px;background:white;text-decoration:none;color:var(--ink);box-shadow:0 12px 35px rgba(7,24,39,.04);transition:.15s;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:12px;background:rgba(244,201,93,.15);font-size:22px;flex-shrink:0;">☕</span>
+        <div><strong style="display:block;font-size:16px;">Support Me</strong><span style="color:var(--muted);font-size:13px;">Buy Me a Coffee</span></div>
+    </a>
+</section>
 @endsection

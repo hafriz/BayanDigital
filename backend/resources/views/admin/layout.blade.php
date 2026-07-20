@@ -86,6 +86,9 @@
                 <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}"><span class="nav-icon">◎</span>Users</a>
                 <a class="nav-link {{ request()->routeIs('admin.backups.*') ? 'active' : '' }}" href="{{ route('admin.backups.index') }}"><span class="nav-icon">☁</span>Backups</a>
             @endif
+            <div class="nav-label">Support</div>
+            <a class="nav-link {{ request()->routeIs('admin.manual') ? 'active' : '' }}" href="{{ route('admin.manual') }}"><span class="nav-icon">📖</span>User Manual</a>
+            <a class="nav-link" href="https://buymeacoffee.com/rarecreation" target="_blank" rel="noopener"><span class="nav-icon">☕</span>Support Me</a>
             <div class="nav-label">Public</div>
             <a class="nav-link" href="{{ route('landing') }}" target="_blank"><span class="nav-icon">↗</span>View website</a>
         </nav>

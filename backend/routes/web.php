@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\MasjidController as AdminMasjidController;
 use App\Http\Controllers\Admin\ScreenContentController as AdminScreenContentController;
 use App\Http\Controllers\Admin\ScreenDeviceController as AdminScreenDeviceController;
 use App\Http\Controllers\Admin\BackupController as AdminBackupController;
+use App\Http\Controllers\Admin\ManualController as AdminManualController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Web\AndroidDownloadController;
 use App\Http\Controllers\Web\LandingPageController;
@@ -27,6 +28,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'destroy'])->name('logout');
         Route::get('/', AdminDashboardController::class)->name('dashboard');
+        Route::get('/manual', AdminManualController::class)->name('manual');
         Route::resource('masjids', AdminMasjidController::class)->only(['index', 'edit', 'update']);
         Route::resource('masjids.contents', AdminScreenContentController::class)->except(['show']);
         Route::middleware('admin')->group(function () {

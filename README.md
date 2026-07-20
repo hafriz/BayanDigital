@@ -86,3 +86,17 @@ secret before the first deployment. The startup seeder creates the first admin
 only when that email does not already exist, so later deployments do not reset
 an administrator's password. Change the temporary password from the Users page
 after signing in.
+
+## User Manual
+
+A comprehensive user manual is available inside the admin panel at **/admin/manual**.
+It covers masjid registration, screen content management, TV device pairing,
+user management, backups, and troubleshooting.
+
+## Support
+
+- **Email:** [support@rarecreation.xyz](mailto:support@rarecreation.xyz)
+- **GitHub Issues:** [hafriz/BayanDigital](https://github.com/hafriz/BayanDigital/issues)
+- **Buy Me a Coffee:** [buymeacoffee.com/rarecreation](https://buymeacoffee.com/rarecreation)
+
+If you find BayanDigital useful, consider buying us a coffee to support continued development.
