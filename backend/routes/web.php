@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\MasjidController as AdminMasjidController;
 use App\Http\Controllers\Admin\ScreenContentController as AdminScreenContentController;
 use App\Http\Controllers\Admin\ScreenDeviceController as AdminScreenDeviceController;
+use App\Http\Controllers\Admin\BackupController as AdminBackupController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Web\AndroidDownloadController;
 use App\Http\Controllers\Web\LandingPageController;
@@ -35,5 +36,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('masjids/{masjid}/devices/{device}/revoke', [AdminScreenDeviceController::class, 'revoke'])->name('masjids.devices.revoke');
         });
         Route::middleware('admin')->resource('users', AdminUserController::class)->except(['show']);
+        Route::middleware('admin')->prefix('backups')->name('backups.')->group(function () {
+            Route::get('/', [AdminBackupController::class, 'index'])->name('index');
+            Route::get('/connect', [AdminBackupController::class, 'connect'])->name('connect');
+            Route::get('/disconnect', [AdminBackupController::class, 'disconnect'])->name('disconnect');
+            Route::post('/', [AdminBackupController::class, 'store'])->name('store');
+            Route::delete('/{backup}', [AdminBackupController::class, 'destroy'])->name('destroy');
+            Route::post('/prune', [AdminBackupController::class, 'prune'])->name('prune');
+        });
     });
 });

@@ -49,6 +49,7 @@ echo "Ensuring initial administrator exists..."
 php "${APP_DIR}/artisan" db:seed --class=AdminUserSeeder --force 2>&1 || echo "Warning: administrator seed issue (non-fatal)"
 
 # ── Cache config ──────────────────────────────────────────────────────────────
+rm -f "${APP_DIR}"/bootstrap/cache/*.php
 php "${APP_DIR}/artisan" config:cache 2>/dev/null || true
 php "${APP_DIR}/artisan" route:cache 2>/dev/null || true
 php "${APP_DIR}/artisan" view:cache 2>/dev/null || true

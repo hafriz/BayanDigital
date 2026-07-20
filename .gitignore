@@ -3,6 +3,9 @@ android/build/
 android/app/build/
 android/local.properties
 *.apk
+.env
+backend/.env
+backend/vendor/
 backend/resources/prayer-times/*.json
 
 # Local deployment credentials

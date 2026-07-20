@@ -84,6 +84,7 @@
             <a class="nav-link {{ request()->routeIs('admin.masjids.*') ? 'active' : '' }}" href="{{ route('admin.masjids.index') }}"><span class="nav-icon">⌂</span>Masjids</a>
             @if(auth()->user()->isAdmin())
                 <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}"><span class="nav-icon">◎</span>Users</a>
+                <a class="nav-link {{ request()->routeIs('admin.backups.*') ? 'active' : '' }}" href="{{ route('admin.backups.index') }}"><span class="nav-icon">☁</span>Backups</a>
             @endif
             <div class="nav-label">Public</div>
             <a class="nav-link" href="{{ route('landing') }}" target="_blank"><span class="nav-icon">↗</span>View website</a>
