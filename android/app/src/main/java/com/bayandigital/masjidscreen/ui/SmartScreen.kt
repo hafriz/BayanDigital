@@ -193,13 +193,12 @@ private fun DashboardScreen(payload: PrayerResponse, currentTime: String, palett
 @Composable
 private fun Masthead(payload: PrayerResponse, displayTime: String, palette: ScreenPalette) {
     Row(Modifier.fillMaxWidth().height(110.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier.size(58.dp).clip(RoundedCornerShape(18.dp)).background(palette.accent),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("ب", color = palette.background, fontSize = 31.sp, fontWeight = FontWeight.Black)
+        Row(Modifier.width(196.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("bayan", color = palette.text, fontSize = 23.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-1.2).sp)
+            Text("Digital", color = palette.accent, fontSize = 23.sp, fontWeight = FontWeight.Black, letterSpacing = (-1.2).sp)
         }
-        Column(Modifier.padding(start = 16.dp).weight(1f)) {
+        Box(Modifier.width(1.dp).height(42.dp).background(palette.text.copy(alpha = .14f)))
+        Column(Modifier.padding(start = 20.dp).weight(1f)) {
             Text(
                 payload.masjid.name,
                 color = palette.text,
