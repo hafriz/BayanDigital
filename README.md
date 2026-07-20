@@ -61,3 +61,9 @@ cp k8s/01-secrets.example.yaml k8s/01-secrets.yaml
 Generate `APP_KEY`, database passwords, and Harbor credentials for production.
 The previously committed credentials must be rotated because removing them from
 the current tree does not remove them from Git history.
+
+Android changes are built on a GitHub-hosted runner. A successful `main` build
+updates the rolling `android-tv-latest` GitHub release, then the local runner
+embeds the APK into the application image and deploys it to Kubernetes. Regular
+backend deployments also download that release first, ensuring the public APK
+remains available after website-only changes.

@@ -45,10 +45,46 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  release-apk:
+    name: Publish rolling APK release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-apk
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download built APK
+        uses: actions/download-artifact@v4
+        with:
+          name: masjid-smart-screen-tv-debug
+          path: build/android-apk
+
+      - name: Publish latest Android TV release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          install -D -m 0644 \
+            build/android-apk/app-debug.apk \
+            build/release/masjid-smart-screen-tv.apk
+          if gh release view android-tv-latest --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload android-tv-latest \
+              'build/release/masjid-smart-screen-tv.apk#bayanDigital Android TV APK' \
+              --clobber --repo "${GITHUB_REPOSITORY}"
+          else
+            gh release create android-tv-latest \
+              'build/release/masjid-smart-screen-tv.apk#bayanDigital Android TV APK' \
+              --title 'bayanDigital Android TV — Latest' \
+              --notes 'Automatically built Android TV development release.' \
+              --latest=false --repo "${GITHUB_REPOSITORY}"
+          fi
+
   publish-apk:
     name: Publish APK and deploy Kubernetes
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build-apk
+    needs: [build-apk, release-apk]
     runs-on: self-hosted
     environment: production
     timeout-minutes: 30

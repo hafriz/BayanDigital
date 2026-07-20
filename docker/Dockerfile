@@ -39,6 +39,11 @@ RUN { \
         echo '    location / {'; \
         echo '        try_files $uri $uri/ /index.php$is_args$args;'; \
         echo '    }'; \
+        echo '    location ~* \.apk$ {'; \
+        echo '        types { application/vnd.android.package-archive apk; }'; \
+        echo '        add_header Content-Disposition "attachment";'; \
+        echo '        try_files $uri =404;'; \
+        echo '    }'; \
         echo '    location ~ \.php$ {'; \
         echo '        fastcgi_pass 127.0.0.1:9000;'; \
         echo '        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;'; \
