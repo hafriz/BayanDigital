@@ -48,6 +48,12 @@ php "${APP_DIR}/artisan" migrate --force 2>&1 || echo "Warning: migration issue 
 echo "Ensuring initial administrator exists..."
 php "${APP_DIR}/artisan" db:seed --class=AdminUserSeeder --force 2>&1 || echo "Warning: administrator seed issue (non-fatal)"
 
+# ── Ensure composer dependencies ──────────────────────────────────────────────
+echo "Checking composer dependencies..."
+cd "${APP_DIR}"
+composer install --no-dev --prefer-dist --no-interaction --no-scripts 2>/dev/null || true
+composer dump-autoload --optimize 2>/dev/null || true
+
 # ── Cache config ──────────────────────────────────────────────────────────────
 rm -f "${APP_DIR}"/bootstrap/cache/*.php
 php "${APP_DIR}/artisan" config:cache 2>/dev/null || true
