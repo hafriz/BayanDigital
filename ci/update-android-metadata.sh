@@ -17,7 +17,8 @@ temporary_file="$(mktemp)"
 trap 'rm -f "${temporary_file}"' EXIT
 
 jq --arg version_name "${version_name}" --argjson version_code "${version_code}" \
-    '.version_name = $version_name | .version_code = $version_code' \
+    --arg apk_url "/android/masjid-smart-screen-tv.apk?v=${version_code}" \
+    '.version_name = $version_name | .version_code = $version_code | .apk_url = $apk_url' \
     "${metadata_file}" > "${temporary_file}"
 mv "${temporary_file}" "${metadata_file}"
 trap - EXIT

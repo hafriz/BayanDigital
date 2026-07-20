@@ -42,6 +42,9 @@ RUN { \
         echo '    location ~* \.apk$ {'; \
         echo '        types { application/vnd.android.package-archive apk; }'; \
         echo '        add_header Content-Disposition "attachment";'; \
+        echo '        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;'; \
+        echo '        add_header Pragma "no-cache" always;'; \
+        echo '        expires -1;'; \
         echo '        try_files $uri =404;'; \
         echo '    }'; \
         echo '    location ~ \.php$ {'; \

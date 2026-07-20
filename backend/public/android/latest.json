@@ -1,6 +1,6 @@
 {
   "version_name": "0.6.0",
   "version_code": 7,
-  "apk_url": "/android/masjid-smart-screen-tv.apk",
+  "apk_url": "/android/masjid-smart-screen-tv.apk?v=7",
   "release_notes": "Adds true immersive full-screen display and a rotating ticker playlist with automatic marquee scrolling for long messages."
 }
