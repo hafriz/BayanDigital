@@ -1,6 +1,9 @@
 <?php
 
 return [
+    // This service mirrors JAKIM e-Solat data and provides a stable JSON API.
+    'endpoint' => env('JAKIM_API_ENDPOINT', 'https://api.waktusolat.app/v2/solat'),
+
     'zones' => [
         'Johor' => [
             'JHR01' => 'Pulau Aur dan Pulau Pemanggil',

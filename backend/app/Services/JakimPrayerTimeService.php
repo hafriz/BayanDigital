@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Http;
 
 class JakimPrayerTimeService
 {
-    private const ENDPOINT = 'https://www.e-solat.gov.my/index.php?r=esolatApi/takwimsolat';
-
     public function ensureMonthCached(string $zoneCode, ?CarbonImmutable $month = null): void
     {
         $month ??= now()->toImmutable();
@@ -24,30 +22,28 @@ class JakimPrayerTimeService
         $payload = Http::retry(3, 500)
             ->timeout(20)
             ->acceptJson()
-            ->get(self::ENDPOINT, [
-                'period' => 'month',
-                'zone' => strtoupper($zoneCode),
+            ->get(rtrim(config('jakim.endpoint'), '/').'/'.strtoupper($zoneCode), [
                 'month' => $start->format('m'),
                 'year' => $start->format('Y'),
             ])
             ->throw()
             ->json();
 
-        foreach (Arr::get($payload, 'prayerTime', []) as $row) {
-            $date = CarbonImmutable::createFromFormat('d-M-Y', $row['date'])->toDateString();
+        foreach (Arr::get($payload, 'prayers', []) as $row) {
+            $date = $start->setDay((int) $row['day'])->toDateString();
 
             PrayerTime::updateOrCreate(
                 ['zone_code' => strtoupper($zoneCode), 'prayer_date' => $date],
                 [
                     'hijri_date' => $row['hijri'] ?? null,
                     'times' => [
-                        'imsak' => $row['imsak'] ?? null,
-                        'subuh' => $row['fajr'] ?? null,
-                        'syuruk' => $row['syuruk'] ?? null,
-                        'zohor' => $row['dhuhr'] ?? null,
-                        'asar' => $row['asr'] ?? null,
-                        'maghrib' => $row['maghrib'] ?? null,
-                        'isyak' => $row['isha'] ?? null,
+                        'imsak' => $this->formatTimestamp($row['imsak'] ?? null),
+                        'subuh' => $this->formatTimestamp($row['fajr'] ?? null),
+                        'syuruk' => $this->formatTimestamp($row['syuruk'] ?? null),
+                        'zohor' => $this->formatTimestamp($row['dhuhr'] ?? null),
+                        'asar' => $this->formatTimestamp($row['asr'] ?? null),
+                        'maghrib' => $this->formatTimestamp($row['maghrib'] ?? null),
+                        'isyak' => $this->formatTimestamp($row['isha'] ?? null),
                     ],
                     'fetched_at' => now(),
                 ]
@@ -86,5 +82,16 @@ class JakimPrayerTimeService
         }
 
         return CarbonImmutable::createFromFormat('H:i:s', $time)->addMinutes($minutes)->format('H:i:s');
+    }
+
+    private function formatTimestamp(mixed $timestamp): ?string
+    {
+        if (! is_numeric($timestamp)) {
+            return null;
+        }
+
+        return CarbonImmutable::createFromTimestampUTC((int) $timestamp)
+            ->setTimezone(config('app.timezone'))
+            ->format('H:i:s');
     }
 }
