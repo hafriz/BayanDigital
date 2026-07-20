@@ -123,9 +123,11 @@ private fun DashboardScreen(
     val featureIndex = if (contents.isEmpty()) 0 else (second / 10) % contents.size
     val featured = contents.getOrNull(featureIndex) ?: welcomeContent(payload.masjid.name)
     val supporting = contents.filterIndexed { index, _ -> index != featureIndex }.take(2)
-    val tickerText = payload.announcements.filter { it.type == "ticker" }
-        .joinToString("          ✦          ") { it.body ?: it.title.orEmpty() }
-        .ifBlank { "Selamat datang ke ${payload.masjid.name}          ✦          Sila senyapkan telefon bimbit anda" }
+    val tickerItems = payload.announcements.filter { it.type == "ticker" }
+        .mapNotNull { (it.body ?: it.title)?.trim()?.takeIf(String::isNotEmpty) }
+    val tickerIndex = if (tickerItems.isEmpty()) 0 else (second / 12) % tickerItems.size
+    val tickerText = tickerItems.getOrNull(tickerIndex)
+        ?: "Selamat datang ke ${payload.masjid.name}     ✦     Sila senyapkan telefon bimbit anda"
 
     Box(
         modifier = Modifier
@@ -192,14 +194,21 @@ private fun DashboardScreen(
                 ) {
                     Text("INFO", color = palette.background, fontSize = 12.sp, fontWeight = FontWeight.Black)
                 }
-                Text(
-                    tickerText,
-                    modifier = Modifier.weight(1f).padding(horizontal = 15.dp).basicMarquee(iterations = Int.MAX_VALUE),
-                    color = palette.background,
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1
-                )
+                Crossfade(
+                    targetState = tickerText,
+                    animationSpec = tween(600),
+                    label = "ticker-message",
+                    modifier = Modifier.weight(1f).padding(horizontal = 15.dp)
+                ) { message ->
+                    Text(
+                        message,
+                        modifier = Modifier.fillMaxWidth().basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 900),
+                        color = palette.background,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
                 ConnectionIndicator(connectionStatus, lastSuccessfulSyncMillis, payload.masjid.timeFormat, palette)
                 Box(Modifier.padding(horizontal = 9.dp).size(3.dp).clip(CircleShape).background(palette.background.copy(alpha = .38f)))
                 Text("v${BuildConfig.VERSION_NAME}", color = palette.background.copy(alpha = .72f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
