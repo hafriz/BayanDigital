@@ -70,6 +70,8 @@ class MasjidScreenController extends Controller
                 'zone_code' => $settings->zone_code,
                 'iqamah_minutes' => $settings->iqamah_minutes ?? [],
                 'silent_mode_minutes' => $settings->silent_mode_minutes,
+                'screen_theme' => $settings->screen_theme ?: 'emerald',
+                'time_format' => $settings->time_format ?: '24h',
             ],
             'date' => [
                 'gregorian' => $today->prayer_date->toDateString(),

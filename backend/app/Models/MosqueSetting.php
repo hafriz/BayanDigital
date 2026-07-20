@@ -20,6 +20,8 @@ class MosqueSetting extends Model
         'prayer_offsets',
         'iqamah_minutes',
         'silent_mode_minutes',
+        'screen_theme',
+        'time_format',
     ];
 
     protected $casts = [

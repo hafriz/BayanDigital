@@ -1,6 +1,6 @@
 {
-  "version_name": "0.1.1",
-  "version_code": 2,
+  "version_name": "0.3.0",
+  "version_code": 4,
   "apk_url": "/android/masjid-smart-screen-tv.apk",
-  "release_notes": "Connects the unique ID to the live masjid screen with clear setup and connection feedback."
+  "release_notes": "New card-based TV dashboard with selectable visual themes, next-prayer countdown, content panels, and configurable 12/24-hour clock."
 }

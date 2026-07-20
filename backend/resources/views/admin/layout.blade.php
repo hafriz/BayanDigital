@@ -39,6 +39,7 @@
         .alert.error { color:#8b1e16; border:1px solid #f4c7c3; background:#fff2f0; }
         .alert ul { margin:8px 0 0; padding-left:20px; }
         .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin-bottom:26px; }
+        .category-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:20px; }
         .stat { padding:23px; border:1px solid var(--line); border-radius:19px; background:white; box-shadow:0 12px 35px rgba(7,24,39,.05); }
         .stat span { color:var(--muted); font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
         .stat strong { display:block; margin-top:7px; color:var(--navy); font-size:34px; }
@@ -69,8 +70,8 @@
         .form-actions { display:flex; gap:10px; padding-top:5px; }
         .empty { padding:46px 22px; color:var(--muted); text-align:center; }
         .pager { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
-        @media(max-width:960px) { .app{display:block}.sidebar{position:static;height:auto;padding:20px}.brand{margin-bottom:18px}.sidebar nav{display:flex;gap:5px;overflow-x:auto}.nav-label{display:none}.nav-link{white-space:nowrap}.sidebar-user{position:static;margin-top:16px}.stats{grid-template-columns:repeat(2,1fr)} }
-        @media(max-width:640px) { .main{padding:28px 16px 50px}.topbar{display:block}.topbar .button{margin-top:18px}.stats,.form-grid,.filters{grid-template-columns:1fr}.stat{padding:18px}th,td{padding:13px}.hide-mobile{display:none} }
+        @media(max-width:960px) { .app{display:block}.sidebar{position:static;height:auto;padding:20px}.brand{margin-bottom:18px}.sidebar nav{display:flex;gap:5px;overflow-x:auto}.nav-label{display:none}.nav-link{white-space:nowrap}.sidebar-user{position:static;margin-top:16px}.stats,.category-grid{grid-template-columns:repeat(2,1fr)} }
+        @media(max-width:640px) { .main{padding:28px 16px 50px}.topbar{display:block}.topbar .button{margin-top:18px}.stats,.category-grid,.form-grid,.filters{grid-template-columns:1fr}.stat{padding:18px}th,td{padding:13px}.hide-mobile{display:none} }
     </style>
 </head>
 <body>

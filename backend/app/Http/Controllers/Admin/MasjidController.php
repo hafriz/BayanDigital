@@ -51,6 +51,8 @@ class MasjidController extends Controller
             'contact_email' => ['nullable', 'email', 'max:150'],
             'address' => ['nullable', 'string', 'max:500'],
             'silent_mode_minutes' => ['required', 'integer', 'min:0', 'max:120'],
+            'screen_theme' => ['required', Rule::in(['emerald', 'midnight', 'sand', 'royal'])],
+            'time_format' => ['required', Rule::in(['24h', '12h'])],
         ]);
 
         $masjid->update($validated);

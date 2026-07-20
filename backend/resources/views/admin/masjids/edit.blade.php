@@ -14,7 +14,18 @@
             <div class="field"><label for="contact_phone">Contact phone</label><input id="contact_phone" name="contact_phone" value="{{ old('contact_phone', $masjid->contact_phone) }}"></div>
             <div class="field"><label for="contact_email">Contact email</label><input id="contact_email" name="contact_email" type="email" value="{{ old('contact_email', $masjid->contact_email) }}"></div>
             <div class="field"><label for="silent_mode_minutes">Silent mode after prayer (minutes)</label><input id="silent_mode_minutes" name="silent_mode_minutes" type="number" min="0" max="120" value="{{ old('silent_mode_minutes', $masjid->silent_mode_minutes) }}" required></div>
+            <div class="field"><label for="time_format">Clock format</label><select id="time_format" name="time_format" required><option value="24h" @selected(old('time_format', $masjid->time_format ?: '24h') === '24h')>24-hour — 19:30</option><option value="12h" @selected(old('time_format', $masjid->time_format) === '12h')>12-hour — 7:30 PM</option></select><small>Controls the live clock and all prayer-time cards.</small></div>
             <div class="field full"><label for="address">Address</label><textarea id="address" name="address">{{ old('address', $masjid->address) }}</textarea></div>
+            <div class="field full"><label>TV screen design</label><div style="display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px">
+                @foreach([
+                    'emerald' => ['Emerald Mihrab', '#071a2d', '#0f766e', '#ffd166'],
+                    'midnight' => ['Midnight Blue', '#050816', '#253b80', '#67e8f9'],
+                    'sand' => ['Warm Sand', '#2b2118', '#8a5d2c', '#f6c85f'],
+                    'royal' => ['Royal Violet', '#140c2e', '#6d28d9', '#f0c75e'],
+                ] as $value => [$label, $background, $panel, $accent])
+                    <label style="display:block;cursor:pointer"><input type="radio" name="screen_theme" value="{{ $value }}" style="width:auto;margin-right:6px" @checked(old('screen_theme', $masjid->screen_theme ?: 'emerald') === $value) required><strong>{{ $label }}</strong><span style="display:block;height:75px;margin-top:8px;border-radius:12px;padding:12px;background:{{ $background }}"><span style="display:block;height:28px;border-radius:8px;background:{{ $panel }};border-left:5px solid {{ $accent }}"></span></span></label>
+                @endforeach
+            </div><small>Each design changes the full TV palette, cards, highlights, and announcement panels.</small></div>
         </div>
         <div class="form-actions"><button class="button" type="submit">Save masjid settings</button><a class="button secondary" href="{{ route('admin.masjids.index') }}">Cancel</a></div>
     </form>
