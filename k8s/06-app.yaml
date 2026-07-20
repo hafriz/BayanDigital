@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bayandigital
+  namespace: bayandigital
+  labels:
+    app.kubernetes.io/name: bayandigital
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bayandigital
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bayandigital
+    spec:
+      initContainers:
+        - name: fix-permissions
+          image: busybox:1.36
+          command: ["sh", "-c", "chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache"]
+          volumeMounts:
+            - name: app-storage
+              mountPath: /var/www/html/storage
+            - name: app-cache
+              mountPath: /var/www/html/bootstrap/cache
+      containers:
+        - name: app
+          image: harbor.development.rarecreation.xyz/bayandigital/app:latest
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: bayandigital-config
+            - secretRef:
+                name: bayandigital-secrets
+          env:
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: bayandigital-secrets
+                  key: DB_PASS
+            - name: APP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bayandigital-secrets
+                  key: APP_KEY
+          volumeMounts:
+            - name: app-storage
+              mountPath: /var/www/html/storage
+            - name: app-cache
+              mountPath: /var/www/html/bootstrap/cache
+          readinessProbe:
+            httpGet:
+              path: /up
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /up
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      imagePullSecrets:
+        - name: harbor-registry-creds
+      volumes:
+        - name: app-storage
+          emptyDir: {}
+        - name: app-cache
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bayandigital
+  namespace: bayandigital
+  labels:
+    app.kubernetes.io/name: bayandigital
+spec:
+  selector:
+    app.kubernetes.io/name: bayandigital
+  ports:
+    - port: 80
+      targetPort: 80

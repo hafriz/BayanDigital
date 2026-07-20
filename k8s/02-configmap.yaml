@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bayandigital-config
+  namespace: bayandigital
+data:
+  APP_NAME: "Masjid Smart Screen"
+  APP_ENV: "production"
+  APP_DEBUG: "true"
+  APP_URL: "https://bayandigital.rarecreation.xyz"
+  DB_HOST: "mariadb"
+  DB_PORT: "3306"
+  DB_DATABASE: "bayandigital"
+  DB_USERNAME: "bayandigital"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  CACHE_DRIVER: "redis"
+  QUEUE_CONNECTION: "redis"
+  SESSION_DRIVER: "redis"
+  ANDROID_TV_VERSION_NAME: "0.1.0"
+  ANDROID_TV_VERSION_CODE: "1"
+  ANDROID_TV_APK_URL: "/android/masjid-smart-screen-tv.apk"
+  ANDROID_TV_RELEASE_NOTES: "Initial Android TV build for Masjid Smart Screen."
