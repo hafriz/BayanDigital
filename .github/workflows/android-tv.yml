@@ -2,6 +2,8 @@ name: Android TV CI
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'android/**'
       - '.github/workflows/android-tv.yml'
@@ -10,8 +12,16 @@ on:
       - 'android/**'
       - '.github/workflows/android-tv.yml'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: android-tv-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-apk:
+    name: Build Android TV APK
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -23,10 +33,85 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
       - name: Build debug APK
-        run: gradle :app:assembleDebug
+        run: gradle :app:assembleDebug --no-daemon
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: masjid-smart-screen-tv-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-apk:
+    name: Publish APK and deploy Kubernetes
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-apk
+    runs-on: self-hosted
+    environment: production
+    timeout-minutes: 30
+    env:
+      REGISTRY: harbor.development.rarecreation.xyz
+      IMAGE_REPOSITORY: bayandigital/app
+      KUBE_NAMESPACE: bayandigital
+      KUBE_DEPLOYMENT: bayandigital
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Download built APK
+        uses: actions/download-artifact@v4
+        with:
+          name: masjid-smart-screen-tv-debug
+          path: build/android-apk
+
+      - name: Install APK into the web application
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -D -m 0644 \
+            build/android-apk/app-debug.apk \
+            backend/public/android/masjid-smart-screen-tv.apk
+          test -s backend/public/android/masjid-smart-screen-tv.apk
+
+      - name: Verify local deployment prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v docker >/dev/null
+          command -v kubectl >/dev/null
+          docker info >/dev/null
+          kubectl cluster-info >/dev/null
+          test "$(kubectl auth can-i patch deployments.apps -n "${KUBE_NAMESPACE}")" = 'yes'
+          test "$(kubectl auth can-i get pods -n "${KUBE_NAMESPACE}")" = 'yes'
+
+      - name: Build and push application image with APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${REGISTRY}/${IMAGE_REPOSITORY}"
+          tag="${GITHUB_SHA}-android"
+          docker build \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --tag "${image}:${tag}" \
+            --tag "${image}:latest" \
+            --file docker/Dockerfile .
+          docker push "${image}:${tag}"
+          docker push "${image}:latest"
+
+      - name: Deploy and verify APK release
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${REGISTRY}/${IMAGE_REPOSITORY}:${GITHUB_SHA}-android"
+          kubectl set image "deployment/${KUBE_DEPLOYMENT}" \
+            "app=${image}" -n "${KUBE_NAMESPACE}"
+          kubectl rollout status "deployment/${KUBE_DEPLOYMENT}" \
+            -n "${KUBE_NAMESPACE}" --timeout=5m
+          kubectl get "deployment/${KUBE_DEPLOYMENT}" \
+            -n "${KUBE_NAMESPACE}" \
+            -o jsonpath='{.spec.template.spec.containers[?(@.name=="app")].image}' \
+            | grep -Fx "${image}"

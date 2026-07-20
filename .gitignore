@@ -3,3 +3,6 @@ android/build/
 android/app/build/
 android/local.properties
 *.apk
+
+# Local deployment credentials
+k8s/01-secrets.yaml

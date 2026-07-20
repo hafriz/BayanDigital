@@ -6,7 +6,7 @@ metadata:
 data:
   APP_NAME: "Masjid Smart Screen"
   APP_ENV: "production"
-  APP_DEBUG: "true"
+  APP_DEBUG: "false"
   APP_URL: "https://bayandigital.rarecreation.xyz"
   DB_HOST: "mariadb"
   DB_PORT: "3306"

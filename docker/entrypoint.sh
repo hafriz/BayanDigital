@@ -3,6 +3,16 @@ set -euo pipefail
 
 APP_DIR="/var/www/html"
 
+# EmptyDir mounts start empty on every Pod, so recreate Laravel's writable
+# directory structure before running cache commands.
+mkdir -p \
+    "${APP_DIR}/storage/framework/cache" \
+    "${APP_DIR}/storage/framework/sessions" \
+    "${APP_DIR}/storage/framework/views" \
+    "${APP_DIR}/storage/logs" \
+    "${APP_DIR}/bootstrap/cache"
+chown -R www-data:www-data "${APP_DIR}/storage" "${APP_DIR}/bootstrap/cache"
+
 # ── Wait for MySQL ────────────────────────────────────────────────────────────
 DB_HOST="${DB_HOST:-mariadb}"
 DB_PORT="${DB_PORT:-3306}"

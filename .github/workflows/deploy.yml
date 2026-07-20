@@ -1,0 +1,113 @@
+name: Deploy Backend to Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'docker/**'
+      - 'k8s/02-configmap.yaml'
+      - 'k8s/06-app.yaml'
+      - 'k8s/07-ingress.yaml'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bayandigital-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    name: Build, push, and deploy
+    runs-on: self-hosted
+    environment: production
+    timeout-minutes: 30
+    env:
+      REGISTRY: harbor.development.rarecreation.xyz
+      IMAGE_REPOSITORY: bayandigital/app
+      KUBE_NAMESPACE: bayandigital
+      KUBE_DEPLOYMENT: bayandigital
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Verify local runner prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v docker >/dev/null
+          command -v kubectl >/dev/null
+          docker info >/dev/null
+          kubectl cluster-info >/dev/null
+
+          for permission in \
+            'get configmaps' 'create configmaps' 'patch configmaps' \
+            'get deployments.apps' 'create deployments.apps' 'patch deployments.apps' 'watch deployments.apps' \
+            'get services' 'create services' 'patch services' \
+            'get ingresses.networking.k8s.io' 'create ingresses.networking.k8s.io' 'patch ingresses.networking.k8s.io' \
+            'get replicasets.apps' 'list replicasets.apps' \
+            'get pods' 'list pods' 'watch pods'; do
+            verb="${permission%% *}"
+            resource="${permission#* }"
+            if [[ "$(kubectl auth can-i "${verb}" "${resource}" -n "${KUBE_NAMESPACE}")" != 'yes' ]]; then
+              echo "Missing Kubernetes permission: ${verb} ${resource} in ${KUBE_NAMESPACE}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Build application image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${REGISTRY}/${IMAGE_REPOSITORY}"
+          docker build \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --tag "${image}:${GITHUB_SHA}" \
+            --tag "${image}:latest" \
+            --file docker/Dockerfile .
+
+      - name: Push application image to Harbor
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${REGISTRY}/${IMAGE_REPOSITORY}"
+          docker push "${image}:${GITHUB_SHA}"
+          docker push "${image}:latest"
+
+      - name: Apply application manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${REGISTRY}/${IMAGE_REPOSITORY}:${GITHUB_SHA}"
+          manifest="$(mktemp)"
+          trap 'rm -f "${manifest}"' EXIT
+
+          sed "s|image: ${REGISTRY}/${IMAGE_REPOSITORY}:latest|image: ${image}|" \
+            k8s/06-app.yaml > "${manifest}"
+
+          if ! grep -q "image: ${image}" "${manifest}"; then
+            echo 'Unable to inject the immutable image tag into k8s/06-app.yaml' >&2
+            exit 1
+          fi
+
+          kubectl apply -f k8s/02-configmap.yaml
+          kubectl apply -f "${manifest}"
+          kubectl apply -f k8s/07-ingress.yaml
+
+      - name: Verify production rollout
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${REGISTRY}/${IMAGE_REPOSITORY}:${GITHUB_SHA}"
+          kubectl rollout status "deployment/${KUBE_DEPLOYMENT}" \
+            -n "${KUBE_NAMESPACE}" --timeout=5m
+          actual="$(kubectl get "deployment/${KUBE_DEPLOYMENT}" \
+            -n "${KUBE_NAMESPACE}" \
+            -o jsonpath='{.spec.template.spec.containers[?(@.name=="app")].image}')"
+          test "${actual}" = "${expected}"
+          echo "Deployed ${actual}"

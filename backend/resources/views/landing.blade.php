@@ -3,34 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Masjid Smart Screen SaaS</title>
+    <title>bayanDigital | Masjid Smart Screen</title>
     <style>
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-        body { margin:0; font-family: system-ui, sans-serif; background:#071a2d; color:#fff; }
-        .hero { min-height:70vh; display:grid; place-items:center; padding:48px; text-align:center; }
-        .card { background:#102a43; border-radius:24px; padding:32px; max-width:920px; box-shadow:0 20px 60px #0008; }
-        a.button { display:inline-block; margin:12px; padding:14px 22px; border-radius:999px; background:#ffd166; color:#071a2d; font-weight:800; text-decoration:none; }
-        .muted { color:#b8f2e6; }
-    </style>
-</head>
-<body>
-<section class="hero">
-    <div class="card">
-        <h1>Masjid Smart Screen System</h1>
-        <p class="muted">SaaS prayer-time CMS for Malaysian masjid and surau Android TV displays.</p>
-        <p>Registered approved sites: {{ $registeredCount }}</p>
-        <p>Current Android TV app: v{{ $android['version_name'] }} ({{ $android['version_code'] }})</p>
-        <a class="button" href="{{ route('masjids.register') }}">Register Masjid / Surau</a>
-        <a class="button" href="{{ route('android.download') }}">Download Android TV App</a>
-    </div>
-</section>
-=======
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
         :root {
             --navy: #061626;
             --deep: #0b2f2a;
@@ -64,12 +38,9 @@
         }
         .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; position: relative; z-index: 1; }
         header { display: flex; align-items: center; justify-content: space-between; padding: 28px 0; }
-        .brand { display: flex; align-items: center; gap: 14px; font-weight: 900; letter-spacing: .02em; }
-        .logo {
-            width: 52px; height: 52px; display: grid; place-items: center; border-radius: 18px;
-            color: var(--navy); background: linear-gradient(145deg, var(--gold), #fff0a8);
-            box-shadow: 0 16px 42px rgba(255, 209, 102, .28);
-        }
+        .brand { display: flex; align-items: center; color: inherit; font-weight: 900; text-decoration: none; }
+        .brand-name { font-size: 25px; font-weight: 650; letter-spacing: -.065em; line-height: 1; }
+        .brand-name b { color: var(--gold); font-weight: 950; }
         .nav a { color: var(--cream); text-decoration: none; margin-left: 22px; opacity: .88; font-weight: 700; }
         .hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 42px; align-items: center; min-height: calc(100vh - 110px); padding: 42px 0 72px; }
         .eyebrow { color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: .18em; }
@@ -112,7 +83,9 @@
 <body>
 <div class="shell">
     <header>
-        <div class="brand"><div class="logo">☪</div><span>Masjid Smart Screen</span></div>
+        <a class="brand" href="{{ route('landing') }}" aria-label="bayanDigital home">
+            <span class="brand-name">bayan<b>Digital</b></span>
+        </a>
         <nav class="nav">
             <a href="{{ route('masjids.register') }}">Register</a>
             <a href="{{ route('android.download') }}">Android App</a>
@@ -160,12 +133,5 @@
         <article class="feature"><h3>Made for worship spaces</h3><p>Large typography, Azan states, Iqamah countdowns, and silent mode keep the display useful without distracting congregants.</p></article>
     </section>
 </div>
-<<<<<<< ours
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
 </body>
 </html>

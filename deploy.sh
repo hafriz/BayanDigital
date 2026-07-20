@@ -6,7 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NS="bayandigital"
-HARBOR="harbor.development.rarecreation.xyz"
+HARBOR="${HARBOR:-harbor.development.rarecreation.xyz}"
 IMAGE="${HARBOR}/bayandigital/app:latest"
 K8S_DIR="${SCRIPT_DIR}/k8s"
 
@@ -23,16 +23,23 @@ kubectl apply -f "${K8S_DIR}/00-namespace.yaml"
 
 # ── Create harbor pull secret ────────────────────────────────────────────────
 echo "==> Creating Harbor imagePullSecret..."
-kubectl get secret harbor-registry-creds -n "${NS}" &>/dev/null || \
+if ! kubectl get secret harbor-registry-creds -n "${NS}" &>/dev/null; then
+    : "${HARBOR_USERNAME:?Set HARBOR_USERNAME to create the registry pull secret}"
+    : "${HARBOR_PASSWORD:?Set HARBOR_PASSWORD to create the registry pull secret}"
     kubectl create secret docker-registry harbor-registry-creds \
         -n "${NS}" \
         --docker-server="${HARBOR}" \
-        --docker-username=hafriz \
-        --docker-password='Sc278resor!' \
+        --docker-username="${HARBOR_USERNAME}" \
+        --docker-password="${HARBOR_PASSWORD}" \
         --dry-run=client -o yaml | kubectl apply -f -
+fi
 
 # ── Apply secrets ────────────────────────────────────────────────────────────
 echo "==> Applying secrets..."
+if [[ ! -f "${K8S_DIR}/01-secrets.yaml" ]]; then
+    echo "Missing ${K8S_DIR}/01-secrets.yaml. Copy 01-secrets.example.yaml and provide production values." >&2
+    exit 1
+fi
 kubectl apply -f "${K8S_DIR}/01-secrets.yaml"
 
 # ── Generate APP_KEY if placeholder ──────────────────────────────────────────

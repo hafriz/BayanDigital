@@ -29,3 +29,35 @@ cd android && gradle projects
 ```
 
 A full Android APK build requires an Android SDK via `ANDROID_HOME` or `android/local.properties`.
+
+## Automatic Kubernetes Deployment
+
+Pushes to `main` that change the backend, container, or application manifests
+trigger `.github/workflows/deploy.yml`. The job runs on a self-hosted runner,
+builds the Laravel image, pushes both the commit SHA and `latest` tags to Harbor,
+deploys the immutable SHA tag, and waits for the rollout to complete.
+
+The self-hosted runner must have:
+
+- Docker and `kubectl` installed.
+- A Docker login for `harbor.development.rarecreation.xyz` in the runner user's
+  Docker configuration.
+- A Kubernetes context for the `development/hafriz-deployer` service account.
+- Network access to Harbor and the Kubernetes API.
+
+Before the first deployment, a cluster administrator must grant the scoped
+permissions and register the local runner:
+
+```bash
+kubectl apply -f k8s/08-deployer-rbac.yaml
+```
+
+Create Kubernetes application secrets locally; never commit their values:
+
+```bash
+cp k8s/01-secrets.example.yaml k8s/01-secrets.yaml
+```
+
+Generate `APP_KEY`, database passwords, and Harbor credentials for production.
+The previously committed credentials must be rotated because removing them from
+the current tree does not remove them from Git history.

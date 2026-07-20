@@ -14,7 +14,9 @@ class MasjidRegistrationController extends Controller
 {
     public function create(): View
     {
-        return view('masjids.register');
+        return view('masjids.register', [
+            'jakimZones' => config('jakim.zones', []),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -22,7 +24,7 @@ class MasjidRegistrationController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
             'type' => ['required', Rule::in(['masjid', 'surau'])],
-            'zone_code' => ['required', 'string', 'max:10'],
+            'zone_code' => ['required', 'string', Rule::in($this->jakimZoneCodes())],
             'contact_name' => ['required', 'string', 'max:120'],
             'contact_phone' => ['required', 'string', 'max:40'],
             'contact_email' => ['nullable', 'email', 'max:150'],
@@ -61,5 +63,14 @@ class MasjidRegistrationController extends Controller
         } while (MosqueSetting::query()->where('public_id', $id)->exists());
 
         return $id;
+    }
+
+    /** @return array<int, string> */
+    private function jakimZoneCodes(): array
+    {
+        return collect(config('jakim.zones', []))
+            ->flatMap(fn (array $zones): array => array_keys($zones))
+            ->values()
+            ->all();
     }
 }
