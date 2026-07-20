@@ -7,6 +7,7 @@
     <style>
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
         body { margin:0; font-family: system-ui, sans-serif; background:#071a2d; color:#fff; }
         .hero { min-height:70vh; display:grid; place-items:center; padding:48px; text-align:center; }
         .card { background:#102a43; border-radius:24px; padding:32px; max-width:920px; box-shadow:0 20px 60px #0008; }
@@ -26,6 +27,8 @@
     </div>
 </section>
 =======
+=======
+>>>>>>> theirs
 =======
 >>>>>>> theirs
         :root {
@@ -158,6 +161,9 @@
     </section>
 </div>
 <<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 =======
 >>>>>>> theirs
