@@ -17,7 +17,4 @@ data:
   CACHE_DRIVER: "redis"
   QUEUE_CONNECTION: "redis"
   SESSION_DRIVER: "redis"
-  ANDROID_TV_VERSION_NAME: "0.1.0"
-  ANDROID_TV_VERSION_CODE: "1"
   ANDROID_TV_APK_URL: "/android/masjid-smart-screen-tv.apk"
-  ANDROID_TV_RELEASE_NOTES: "Initial Android TV build for Masjid Smart Screen."

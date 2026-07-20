@@ -1,6 +1,6 @@
 {
-  "version_name": "0.1.0",
-  "version_code": 1,
+  "version_name": "0.1.1",
+  "version_code": 2,
   "apk_url": "/android/masjid-smart-screen-tv.apk",
-  "release_notes": "Initial Android TV build for Masjid Smart Screen. CI publishes the debug APK artifact on every Android change."
+  "release_notes": "Connects the unique ID to the live masjid screen with clear setup and connection feedback."
 }

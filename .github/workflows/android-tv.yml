@@ -7,10 +7,12 @@ on:
     paths:
       - 'android/**'
       - '.github/workflows/android-tv.yml'
+      - 'ci/update-android-metadata.sh'
   pull_request:
     paths:
       - 'android/**'
       - '.github/workflows/android-tv.yml'
+      - 'ci/update-android-metadata.sh'
 
 permissions:
   contents: read
@@ -112,6 +114,10 @@ jobs:
             build/android-apk/app-debug.apk \
             backend/public/android/masjid-smart-screen-tv.apk
           test -s backend/public/android/masjid-smart-screen-tv.apk
+
+      - name: Synchronize Android release metadata
+        shell: bash
+        run: bash ci/update-android-metadata.sh
 
       - name: Bundle current JAKIM prayer times
         shell: bash

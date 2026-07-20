@@ -12,6 +12,7 @@ on:
       - 'k8s/07-ingress.yaml'
       - '.github/workflows/deploy.yml'
       - 'ci/fetch-prayer-times.sh'
+      - 'ci/update-android-metadata.sh'
   workflow_dispatch:
   schedule:
     - cron: '15 0 1 * *'
@@ -71,6 +72,10 @@ jobs:
             --output backend/public/android/masjid-smart-screen-tv.apk \
             "https://github.com/${GITHUB_REPOSITORY}/releases/download/android-tv-latest/masjid-smart-screen-tv.apk"
           test -s backend/public/android/masjid-smart-screen-tv.apk
+
+      - name: Synchronize Android release metadata
+        shell: bash
+        run: bash ci/update-android-metadata.sh
 
       - name: Bundle current JAKIM prayer times
         shell: bash
