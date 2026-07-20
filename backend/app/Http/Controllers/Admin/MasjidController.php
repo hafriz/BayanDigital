@@ -54,6 +54,17 @@ class MasjidController extends Controller
             'screen_theme' => ['required', Rule::in(['emerald', 'midnight', 'sand', 'royal'])],
             'time_format' => ['required', Rule::in(['24h', '12h'])],
             'logo_url' => ['nullable', 'url:http,https', 'max:255'],
+            'google_calendar_ics_url' => [
+                'nullable',
+                'url:http,https',
+                'max:1000',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $host = strtolower((string) parse_url((string) $value, PHP_URL_HOST));
+                    if ($value && ! in_array($host, ['calendar.google.com', 'www.google.com'], true)) {
+                        $fail('Use the Public address in iCal format from Google Calendar.');
+                    }
+                },
+            ],
         ]);
 
         $masjid->update($validated);

@@ -29,7 +29,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,6 +64,7 @@ import java.time.format.FormatStyle
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.coroutines.delay
 
 sealed interface ScreenState {
     data object Idle : ScreenState
@@ -125,14 +130,25 @@ private fun DashboardScreen(
     val featureIndex = if (featuredItems.isEmpty()) 0 else (second / 10) % featuredItems.size
     val featured = featuredItems.getOrNull(featureIndex) ?: welcomeContent(payload.masjid.name)
     val schedules = payload.announcements.filter { it.type == "schedule" }
-    val schedule = schedules.getOrNull(if (schedules.isEmpty()) 0 else (second / 12) % schedules.size)
-        ?: AnnouncementDto("schedule", "Jadual Ustaz", "Jadual kuliah akan dikemas kini oleh pihak pengurusan.")
     val visuals = payload.announcements.filter { it.type in listOf("image", "slide") && !it.mediaPath.isNullOrBlank() }
     val visual = visuals.getOrNull(if (visuals.isEmpty()) 0 else (second / 10) % visuals.size)
         ?: AnnouncementDto("image", "Maklumat Komuniti", "Media dan poster aktiviti akan dipaparkan di sini.")
+    val alternateItems = payload.announcements.filter {
+        it.type != "ticker" && it != featured && it != visual && it.type != "schedule"
+    }
+    val scheduleOrAlternate = schedules.getOrNull(if (schedules.isEmpty()) 0 else (second / 12) % schedules.size)
+        ?: alternateItems.getOrNull(if (alternateItems.isEmpty()) 0 else (second / 12) % alternateItems.size)
+        ?: AnnouncementDto("announcement", "Adab di rumah Allah", "Jaga kebersihan, rapatkan saf dan hormati jemaah lain.")
     val tickerItems = payload.announcements.filter { it.type == "ticker" }
         .mapNotNull { (it.body ?: it.title)?.trim()?.takeIf(String::isNotEmpty) }
-    val tickerIndex = if (tickerItems.isEmpty()) 0 else (second / 12) % tickerItems.size
+    var tickerIndex by remember(tickerItems) { mutableIntStateOf(0) }
+    LaunchedEffect(tickerItems) {
+        tickerIndex = 0
+        while (tickerItems.size > 1) {
+            delay(12_000)
+            tickerIndex = (tickerIndex + 1) % tickerItems.size
+        }
+    }
     val tickerText = tickerItems.getOrNull(tickerIndex)
         ?: "Selamat datang ke ${payload.masjid.name}     ✦     Sila senyapkan telefon bimbit anda"
 
@@ -167,8 +183,8 @@ private fun DashboardScreen(
                 ) { content -> FeaturedContentCard(content, featureIndex + 1, maxOf(featuredItems.size, 1), palette) }
 
                 Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Crossfade(targetState = schedule, animationSpec = tween(600), label = "ustaz-schedule", modifier = Modifier.weight(1f).fillMaxWidth()) {
-                        ScheduleCard(it, palette)
+                    Crossfade(targetState = scheduleOrAlternate, animationSpec = tween(600), label = "schedule-or-info", modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        if (it.type == "schedule") ScheduleCard(it, palette) else AlternateInfoCard(it, palette)
                     }
                     Crossfade(targetState = visual, animationSpec = tween(600), label = "visual-information", modifier = Modifier.weight(1f).fillMaxWidth()) {
                         VisualContentCard(it, palette)
@@ -435,6 +451,46 @@ private fun FeaturedContentCard(content: AnnouncementDto, position: Int, total: 
 
 @Composable
 private fun ScheduleCard(content: AnnouncementDto, palette: ScreenPalette) {
+    Row(
+        Modifier.fillMaxSize()
+            .clip(RoundedCornerShape(24.dp))
+            .background(palette.surface.copy(alpha = .88f))
+            .border(1.dp, palette.text.copy(alpha = .08f), RoundedCornerShape(24.dp))
+            .padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                ContentBadge("schedule", palette)
+                Text("MINGGU INI", color = palette.muted, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            }
+            Spacer(Modifier.height(7.dp))
+            Text(
+                content.title ?: "Jadual Ustaz",
+                color = palette.text,
+                fontSize = 18.sp,
+                lineHeight = 21.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(5.dp))
+            Text(content.body.orEmpty(), color = palette.muted, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        }
+        if (!content.mediaPath.isNullOrBlank()) SubcomposeAsyncImage(
+            model = content.mediaPath,
+            contentDescription = content.title,
+            modifier = Modifier.width(82.dp).fillMaxHeight().clip(RoundedCornerShape(16.dp)),
+            contentScale = ContentScale.Crop,
+            loading = { VisualPlaceholder(palette) },
+            error = { VisualPlaceholder(palette) }
+        )
+    }
+}
+
+@Composable
+private fun AlternateInfoCard(content: AnnouncementDto, palette: ScreenPalette) {
     Column(
         Modifier.fillMaxSize()
             .clip(RoundedCornerShape(24.dp))
@@ -443,29 +499,13 @@ private fun ScheduleCard(content: AnnouncementDto, palette: ScreenPalette) {
             .padding(18.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            ContentBadge("schedule", palette)
-            Text("MINGGU INI", color = palette.muted, fontSize = 9.sp, fontWeight = FontWeight.Black)
+        ContentBadge(content.type, palette)
+        Spacer(Modifier.height(8.dp))
+        Text(content.title ?: contentDefaultTitle(content.type), color = palette.text, fontSize = 19.sp, lineHeight = 22.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        if (!content.body.isNullOrBlank()) {
+            Spacer(Modifier.height(5.dp))
+            Text(content.body, color = palette.muted, fontSize = 13.sp, lineHeight = 17.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
-        Spacer(Modifier.height(7.dp))
-        Text(
-            content.title ?: "Jadual Ustaz",
-            color = palette.text,
-            fontSize = 18.sp,
-            lineHeight = 21.sp,
-            fontWeight = FontWeight.ExtraBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(Modifier.height(5.dp))
-        Text(
-            content.body.orEmpty(),
-            color = palette.muted,
-            fontSize = 12.sp,
-            lineHeight = 16.sp,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
     }
 }
 

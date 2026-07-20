@@ -7,12 +7,18 @@ use App\Models\MosqueSetting;
 use App\Models\ScreenContent;
 use App\Models\ScreenDevice;
 use App\Services\JakimPrayerTimeService;
+use App\Services\GoogleCalendarScheduleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class MasjidScreenController extends Controller
 {
-    public function show(Request $request, string $publicId, JakimPrayerTimeService $service): JsonResponse
+    public function show(
+        Request $request,
+        string $publicId,
+        JakimPrayerTimeService $service,
+        GoogleCalendarScheduleService $calendar
+    ): JsonResponse
     {
         $token = $request->bearerToken();
         $device = is_string($token) && $token !== ''
@@ -88,7 +94,9 @@ class MasjidScreenController extends Controller
                     'title' => $content->title,
                     'body' => $content->body,
                     'media_path' => $this->publicUrl($content->media_path),
-                ]),
+                ])
+                ->concat($calendar->upcoming($settings))
+                ->values(),
             'android' => config('android'),
             'synced_at' => now()->toIso8601String(),
         ]);

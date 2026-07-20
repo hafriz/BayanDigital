@@ -23,6 +23,7 @@ class MosqueSetting extends Model
         'screen_theme',
         'time_format',
         'logo_url',
+        'google_calendar_ics_url',
     ];
 
     protected $casts = [

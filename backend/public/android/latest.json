@@ -1,6 +1,6 @@
 {
-  "version_name": "0.7.0",
-  "version_code": 8,
-  "apk_url": "/android/masjid-smart-screen-tv.apk?v=8",
-  "release_notes": "Adds masjid logo and image media support, dedicated ustaz schedule and visual cards, plus richer default demo content for every registration."
+  "version_name": "0.8.0",
+  "version_code": 9,
+  "apk_url": "/android/masjid-smart-screen-tv.apk?v=9",
+  "release_notes": "Adds keep-awake kiosk behavior, launch on TV boot, looping tickers, schedule fallback content, ustaz images, and public Google Calendar timetable integration."
 }
