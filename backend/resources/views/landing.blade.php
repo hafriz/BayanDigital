@@ -131,7 +131,7 @@
     <section class="features">
         <article class="feature"><h3>Tenant-based setup</h3><p>Each masjid or surau receives a unique ID so every Android TV loads the correct local settings, timetable, and content.</p></article>
         <article class="feature"><h3>JAKIM cached data</h3><p>Prayer times are cached in Laravel monthly to reduce downtime risk and keep displays resilient when external services are unavailable.</p></article>
-        <article class="feature"><h3>Made for worship spaces</h3><p>Large typography, Azan states, Iqamah countdowns, and silent mode keep the display useful without distracting congregants.</p></article>
+        <article class="feature"><h3>Made for Masjid &amp; Surau</h3><p>Large typography, Azan states, Iqamah countdowns, and silent mode keep the display useful without distracting congregants.</p></article>
     </section>
 </div>
 </body>
