@@ -14,8 +14,26 @@ class MasjidScreenController extends Controller
     {
         $settings = MosqueSetting::query()
             ->where('public_id', strtoupper($publicId))
-            ->where('status', 'approved')
-            ->firstOrFail();
+            ->first();
+
+        if (! $settings) {
+            return response()->json([
+                'message' => 'This masjid or surau ID was not found.',
+                'code' => 'MASJID_NOT_FOUND',
+            ], 404);
+        }
+
+        if ($settings->status !== 'approved') {
+            return response()->json([
+                'message' => match ($settings->status) {
+                    'pending' => 'This registration is waiting for administrator approval.',
+                    'suspended' => 'This display has been suspended. Please contact the administrator.',
+                    'rejected' => 'This registration was not approved. Please contact the administrator.',
+                    default => 'This display is not currently active.',
+                },
+                'code' => 'MASJID_'.strtoupper($settings->status),
+            ], 403);
+        }
 
         $today = $service->today($settings->zone_code, $settings->prayer_offsets ?? []);
 
