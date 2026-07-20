@@ -1,6 +1,6 @@
 {
-  "version_name": "0.4.0",
-  "version_code": 5,
+  "version_name": "0.5.0",
+  "version_code": 6,
   "apk_url": "/android/masjid-smart-screen-tv.apk",
-  "release_notes": "Premium digital-signage redesign with a stronger next-prayer focus, animated content carousel, prayer timeline, live ticker, and scalable geometric styling."
+  "release_notes": "Adds automatic 60-second backend refresh, offline cached display, 30-second connection retry, last-sync time, and live connection status on the TV screen."
 }

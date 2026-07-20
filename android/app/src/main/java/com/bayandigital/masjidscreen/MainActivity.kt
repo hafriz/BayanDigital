@@ -23,11 +23,13 @@ import com.bayandigital.masjidscreen.setup.MasjidSetupStore
 import com.bayandigital.masjidscreen.setup.PairingScreen
 import com.bayandigital.masjidscreen.setup.SetupScreen
 import com.bayandigital.masjidscreen.ui.ScreenState
+import com.bayandigital.masjidscreen.ui.ScreenConnectionStatus
 import com.bayandigital.masjidscreen.ui.SmartScreen
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.io.IOException
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -62,20 +64,36 @@ class MainActivity : ComponentActivity() {
             var setupError by remember { mutableStateOf<String?>(null) }
             var pairingMessage by remember { mutableStateOf<String?>(null) }
             var currentTime by remember { mutableStateOf(currentClockTime()) }
+            var connectionStatus by remember { mutableStateOf(ScreenConnectionStatus.Syncing) }
+            var lastSuccessfulSyncMillis by remember { mutableStateOf<Long?>(null) }
 
             LaunchedEffect(connectVersion) {
                 if (connectVersion == 0 || !store.isConfigured) return@LaunchedEffect
 
-                runCatching { repository.sync(store.masjidId!!, store.deviceToken!!) }
-                    .onSuccess { payload = it }
-                    .onFailure { error ->
+                while (store.isConfigured) {
+                    if (payload == null) connectionStatus = ScreenConnectionStatus.Syncing
+                    try {
+                        val result = repository.sync(store.masjidId!!, store.deviceToken!!)
+                        payload = result.payload
+                        lastSuccessfulSyncMillis = result.lastSuccessfulSyncMillis
+                        connectionStatus = if (result.isConnected) ScreenConnectionStatus.Connected else ScreenConnectionStatus.Offline
+                        setupError = null
+                        delay(if (result.isConnected) CONNECTED_REFRESH_MILLIS else OFFLINE_RETRY_MILLIS)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Throwable) {
                         if (error is HttpException && error.code() in listOf(401, 403)) {
                             store.clearPairing()
+                            payload = null
                             setupError = "This TV pairing is no longer valid. Search and request approval again."
+                            break
                         } else {
+                            connectionStatus = ScreenConnectionStatus.Offline
                             setupError = friendlyConnectionError(error)
+                            delay(OFFLINE_RETRY_MILLIS)
                         }
                     }
+                }
             }
 
             LaunchedEffect(payload) {
@@ -88,7 +106,13 @@ class MainActivity : ComponentActivity() {
 
             payload?.let { screenPayload ->
                 BackHandler { payload = null }
-                SmartScreen(payload = screenPayload, currentTime = currentTime, state = ScreenState.Idle)
+                SmartScreen(
+                    payload = screenPayload,
+                    currentTime = currentTime,
+                    state = ScreenState.Idle,
+                    connectionStatus = connectionStatus,
+                    lastSuccessfulSyncMillis = lastSuccessfulSyncMillis
+                )
             } ?: pairing?.let { pairingRequest ->
                 PairingScreen(
                     appVersion = BuildConfig.VERSION_NAME,
@@ -177,6 +201,8 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val API_BASE_URL = "https://bayandigital.rarecreation.xyz/"
+        private const val CONNECTED_REFRESH_MILLIS = 60_000L
+        private const val OFFLINE_RETRY_MILLIS = 30_000L
         private val CLOCK_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
     }
 }

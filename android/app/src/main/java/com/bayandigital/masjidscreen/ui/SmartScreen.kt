@@ -51,6 +51,8 @@ import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.Instant
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlin.math.PI
@@ -63,6 +65,8 @@ sealed interface ScreenState {
     data class IqamahCountdown(val prayerName: String, val remainingSeconds: Int) : ScreenState
     data class SilentMode(val message: String) : ScreenState
 }
+
+enum class ScreenConnectionStatus { Syncing, Connected, Offline }
 
 private data class ScreenPalette(
     val background: Color,
@@ -79,11 +83,17 @@ private data class PrayerItem(val key: String, val label: String, val time: Stri
 private data class NextPrayer(val item: PrayerItem, val remainingSeconds: Long)
 
 @Composable
-fun SmartScreen(payload: PrayerResponse, currentTime: String, state: ScreenState) {
+fun SmartScreen(
+    payload: PrayerResponse,
+    currentTime: String,
+    state: ScreenState,
+    connectionStatus: ScreenConnectionStatus = ScreenConnectionStatus.Connected,
+    lastSuccessfulSyncMillis: Long? = null
+) {
     val palette = paletteFor(payload.masjid.screenTheme)
     Crossfade(targetState = state, animationSpec = tween(700), label = "screen-state") { screenState ->
         when (screenState) {
-            ScreenState.Idle -> DashboardScreen(payload, currentTime, palette)
+            ScreenState.Idle -> DashboardScreen(payload, currentTime, palette, connectionStatus, lastSuccessfulSyncMillis)
             is ScreenState.AzanAlert -> FullScreenMessage("AZAN", screenState.prayerName, palette.surface, palette.accent)
             is ScreenState.IqamahCountdown -> FullScreenMessage(
                 "IQAMAH ${screenState.prayerName.uppercase()}",
@@ -98,7 +108,13 @@ fun SmartScreen(payload: PrayerResponse, currentTime: String, state: ScreenState
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun DashboardScreen(payload: PrayerResponse, currentTime: String, palette: ScreenPalette) {
+private fun DashboardScreen(
+    payload: PrayerResponse,
+    currentTime: String,
+    palette: ScreenPalette,
+    connectionStatus: ScreenConnectionStatus,
+    lastSuccessfulSyncMillis: Long?
+) {
     val prayers = prayerItems(payload)
     val nextPrayer = calculateNextPrayer(prayers, currentTime)
     val displayTime = formatClock(currentTime, payload.masjid.timeFormat)
@@ -184,8 +200,36 @@ private fun DashboardScreen(payload: PrayerResponse, currentTime: String, palett
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
                 )
-                Text("bayanDigital  ·  v${BuildConfig.VERSION_NAME}", color = palette.background.copy(alpha = .72f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                ConnectionIndicator(connectionStatus, lastSuccessfulSyncMillis, payload.masjid.timeFormat, palette)
+                Box(Modifier.padding(horizontal = 9.dp).size(3.dp).clip(CircleShape).background(palette.background.copy(alpha = .38f)))
+                Text("v${BuildConfig.VERSION_NAME}", color = palette.background.copy(alpha = .72f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
+        }
+    }
+}
+
+@Composable
+private fun ConnectionIndicator(
+    status: ScreenConnectionStatus,
+    lastSuccessfulSyncMillis: Long?,
+    timeFormat: String,
+    palette: ScreenPalette
+) {
+    val statusColor = when (status) {
+        ScreenConnectionStatus.Connected -> Color(0xFF087A55)
+        ScreenConnectionStatus.Syncing -> Color(0xFF8A6500)
+        ScreenConnectionStatus.Offline -> Color(0xFFB42318)
+    }
+    val label = when (status) {
+        ScreenConnectionStatus.Connected -> "CONNECTED"
+        ScreenConnectionStatus.Syncing -> "SYNCING"
+        ScreenConnectionStatus.Offline -> "OFFLINE"
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(7.dp).clip(CircleShape).background(statusColor))
+        Text("  $label", color = palette.background, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        if (lastSuccessfulSyncMillis != null) {
+            Text("  ·  ${formatLastSync(lastSuccessfulSyncMillis, timeFormat)}", color = palette.background.copy(alpha = .68f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -466,6 +510,11 @@ private fun formatPrayerTime(value: String, format: String): String {
 private fun formatDisplayDate(value: String): String = runCatching {
     LocalDate.parse(value).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))
 }.getOrDefault(value)
+
+private fun formatLastSync(value: Long, timeFormat: String): String = runCatching {
+    val pattern = if (timeFormat == "12h") "h:mm a" else "HH:mm"
+    Instant.ofEpochMilli(value).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(pattern))
+}.getOrDefault("saved")
 
 private fun formatCountdown(seconds: Long): String {
     val hours = seconds / 3600
