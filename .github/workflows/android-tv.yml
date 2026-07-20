@@ -113,6 +113,10 @@ jobs:
             backend/public/android/masjid-smart-screen-tv.apk
           test -s backend/public/android/masjid-smart-screen-tv.apk
 
+      - name: Bundle current JAKIM prayer times
+        shell: bash
+        run: bash ci/fetch-prayer-times.sh
+
       - name: Verify local deployment prerequisites
         shell: bash
         run: |

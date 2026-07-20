@@ -3,6 +3,7 @@ android/build/
 android/app/build/
 android/local.properties
 *.apk
+backend/resources/prayer-times/*.json
 
 # Local deployment credentials
 k8s/01-secrets.yaml

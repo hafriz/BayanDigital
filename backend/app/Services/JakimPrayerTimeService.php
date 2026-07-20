@@ -19,7 +19,7 @@ class JakimPrayerTimeService
             return;
         }
 
-        $payload = Http::retry(3, 500)
+        $payload = $this->bundledPayload($zoneCode, $start) ?? Http::retry(3, 500)
             ->timeout(20)
             ->acceptJson()
             ->get(rtrim(config('jakim.endpoint'), '/').'/'.strtoupper($zoneCode), [
@@ -93,5 +93,24 @@ class JakimPrayerTimeService
         return CarbonImmutable::createFromTimestampUTC((int) $timestamp)
             ->setTimezone(config('app.timezone'))
             ->format('H:i:s');
+    }
+
+    private function bundledPayload(string $zoneCode, CarbonImmutable $month): ?array
+    {
+        $path = resource_path(sprintf(
+            'prayer-times/%s-%s.json',
+            strtoupper($zoneCode),
+            $month->format('Y-m'),
+        ));
+
+        if (! is_file($path)) {
+            return null;
+        }
+
+        $payload = json_decode((string) file_get_contents($path), true);
+
+        return is_array($payload) && count(Arr::get($payload, 'prayers', [])) >= 28
+            ? $payload
+            : null;
     }
 }
