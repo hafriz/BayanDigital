@@ -84,7 +84,6 @@ jobs:
           command -v docker >/dev/null
           command -v kubectl >/dev/null
           docker info >/dev/null
-          kubectl cluster-info >/dev/null
           test "$(kubectl auth can-i patch deployments.apps -n "${KUBE_NAMESPACE}")" = 'yes'
           test "$(kubectl auth can-i get pods -n "${KUBE_NAMESPACE}")" = 'yes'
 

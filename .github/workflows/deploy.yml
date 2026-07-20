@@ -43,7 +43,6 @@ jobs:
           command -v docker >/dev/null
           command -v kubectl >/dev/null
           docker info >/dev/null
-          kubectl cluster-info >/dev/null
 
           for permission in \
             'get configmaps' 'create configmaps' 'patch configmaps' \
