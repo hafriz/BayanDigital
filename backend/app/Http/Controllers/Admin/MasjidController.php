@@ -65,6 +65,11 @@ class MasjidController extends Controller
                     }
                 },
             ],
+            'screen_sleep_enabled' => ['required', 'boolean'],
+            'screen_sleep_time' => ['required', 'date_format:H:i'],
+            'screen_wake_mode' => ['required', Rule::in(['fixed', 'before_subuh'])],
+            'screen_wake_time' => ['required', 'date_format:H:i'],
+            'wake_before_subuh_minutes' => ['required', 'integer', 'min:0', 'max:180'],
         ]);
 
         $masjid->update($validated);

@@ -2,10 +2,14 @@ package com.bayandigital.masjidscreen
 
 import android.os.Build
 import android.os.Bundle
+import android.content.Intent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -16,6 +20,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.bayandigital.masjidscreen.data.MasjidSearchResult
 import com.bayandigital.masjidscreen.data.PairingRequestBody
 import com.bayandigital.masjidscreen.data.PairingRequestResponse
@@ -45,8 +51,7 @@ import retrofit2.Retrofit
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        enableImmersiveMode()
+        wakeDisplay()
 
         val preferences = getSharedPreferences("screen_setup", MODE_PRIVATE)
         val store = MasjidSetupStore(preferences)
@@ -72,6 +77,15 @@ class MainActivity : ComponentActivity() {
             var currentTime by remember { mutableStateOf(currentClockTime()) }
             var connectionStatus by remember { mutableStateOf(ScreenConnectionStatus.Syncing) }
             var lastSuccessfulSyncMillis by remember { mutableStateOf<Long?>(null) }
+            val scheduledSleep = payload?.let { DisplayPowerSchedule.isSleeping(it.masjid, it.timeline, currentTime) } ?: false
+
+            LaunchedEffect(payload?.masjid, payload?.timeline) {
+                payload?.let { DisplayPowerSchedule.scheduleWake(this@MainActivity, it.masjid, it.timeline) }
+            }
+
+            LaunchedEffect(scheduledSleep) {
+                applyDisplayPowerState(scheduledSleep)
+            }
 
             LaunchedEffect(connectVersion) {
                 if (connectVersion == 0 || !store.isConfigured) return@LaunchedEffect
@@ -110,7 +124,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            payload?.let { screenPayload ->
+            if (scheduledSleep) {
+                BackHandler { }
+                Box(Modifier.fillMaxSize().background(Color.Black))
+            } else payload?.let { screenPayload ->
                 BackHandler { payload = null }
                 SmartScreen(
                     payload = screenPayload,
@@ -186,6 +203,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra(DisplayWakeReceiver.EXTRA_SCHEDULED_WAKE, false)) wakeDisplay()
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) enableImmersiveMode()
@@ -196,6 +219,30 @@ class MainActivity : ComponentActivity() {
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
+    private fun wakeDisplay() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setTurnScreenOn(true)
+            setShowWhenLocked(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+        }
+        applyDisplayPowerState(false)
+    }
+
+    private fun applyDisplayPowerState(sleeping: Boolean) {
+        if (sleeping) {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            enableImmersiveMode()
+        }
+        window.attributes = window.attributes.apply {
+            screenBrightness = if (sleeping) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_OFF
+            else WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
         }
     }
 

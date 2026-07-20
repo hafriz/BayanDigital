@@ -1,12 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
     <application
-        android:banner="@drawable/ic_launcher"
-        android:icon="@drawable/ic_launcher"
-        android:label="Masjid Smart Screen"
+        android:banner="@drawable/bayandigital_banner"
+        android:icon="@drawable/bayandigital_icon"
+        android:label="@string/app_name"
         android:theme="@style/AppTheme">
         <activity
             android:name=".MainActivity"
@@ -27,5 +29,9 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name=".DisplayWakeReceiver"
+            android:enabled="true"
+            android:exported="false" />
     </application>
 </manifest>

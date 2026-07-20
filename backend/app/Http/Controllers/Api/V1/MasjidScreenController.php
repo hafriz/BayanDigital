@@ -79,6 +79,11 @@ class MasjidScreenController extends Controller
                 'screen_theme' => $settings->screen_theme ?: 'emerald',
                 'time_format' => $settings->time_format ?: '24h',
                 'logo_url' => $this->publicUrl($settings->logo_url),
+                'screen_sleep_enabled' => (bool) $settings->screen_sleep_enabled,
+                'screen_sleep_time' => substr((string) $settings->screen_sleep_time, 0, 5),
+                'screen_wake_mode' => $settings->screen_wake_mode ?: 'fixed',
+                'screen_wake_time' => substr((string) $settings->screen_wake_time, 0, 5),
+                'wake_before_subuh_minutes' => (int) ($settings->wake_before_subuh_minutes ?? 30),
             ],
             'date' => [
                 'gregorian' => $today->prayer_date->toDateString(),

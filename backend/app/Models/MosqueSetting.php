@@ -24,12 +24,19 @@ class MosqueSetting extends Model
         'time_format',
         'logo_url',
         'google_calendar_ics_url',
+        'screen_sleep_enabled',
+        'screen_sleep_time',
+        'screen_wake_mode',
+        'screen_wake_time',
+        'wake_before_subuh_minutes',
     ];
 
     protected $casts = [
         'prayer_offsets' => 'array',
         'iqamah_minutes' => 'array',
         'silent_mode_minutes' => 'integer',
+        'screen_sleep_enabled' => 'boolean',
+        'wake_before_subuh_minutes' => 'integer',
     ];
 
     public function screenContents(): HasMany
