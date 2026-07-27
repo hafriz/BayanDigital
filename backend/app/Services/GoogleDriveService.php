@@ -29,7 +29,7 @@ class GoogleDriveService
 
         $refreshToken = $this->getStoredRefreshToken();
         if ($refreshToken) {
-            $this->client->setRefreshToken($refreshToken);
+            $this->client->fetchAccessTokenWithRefreshToken($refreshToken);
         }
 
         return $this->client;
