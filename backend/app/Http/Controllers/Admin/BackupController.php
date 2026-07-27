@@ -58,15 +58,23 @@ class BackupController extends Controller
                 ->with('error', 'A backup is already in progress.');
         }
 
-        $backup = $this->backupService->createBackup(Backup::TYPE_MANUAL);
+        $backup = Backup::create([
+            'type' => Backup::TYPE_MANUAL,
+            'status' => Backup::STATUS_RUNNING,
+            'started_at' => now(),
+        ]);
 
-        if ($backup->status === Backup::STATUS_COMPLETED) {
-            return redirect()->route('admin.backups.index')
-                ->with('success', "Backup completed: {$backup->formattedSize()}");
-        }
+        $logFile = storage_path('logs/backup.log');
+        $cmd = sprintf(
+            'cd %s && nohup php artisan backup:run --backup-id=%d >> %s 2>&1 &',
+            escapeshellarg(base_path()),
+            $backup->id,
+            escapeshellarg($logFile)
+        );
+        exec($cmd);
 
         return redirect()->route('admin.backups.index')
-            ->with('error', "Backup failed: {$backup->error}");
+            ->with('success', 'Backup started. It will complete in the background.');
     }
 
     public function destroy(Backup $backup): RedirectResponse

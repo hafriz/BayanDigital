@@ -20,6 +20,12 @@ class BackupService
             'started_at' => now(),
         ]);
 
+        return $this->executeBackup($backup);
+    }
+
+    public function executeBackup(Backup $backup): Backup
+    {
+
         try {
             $timestamp = now()->format('Y-m-d_H-i-s');
 
