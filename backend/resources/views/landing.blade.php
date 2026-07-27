@@ -82,11 +82,6 @@
 </head>
 <body>
 <div class="shell">
-    <div style="text-align:center;padding:10px 0;margin-bottom:-10px;">
-        <a href="https://buymeacoffee.com/rarecreation" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--gold),#ffe8a3);color:var(--navy);padding:8px 20px;border-radius:999px;font-weight:800;font-size:14px;text-decoration:none;transition:transform .2s ease;">
-            ☕ Buy Me a Coffee
-        </a>
-    </div>
     <header>
         <a class="brand" href="{{ route('landing') }}" aria-label="bayanDigital home">
             <span class="brand-name">bayan<b>Digital</b></span>
@@ -95,6 +90,7 @@
             <a href="{{ route('masjids.register') }}">Register</a>
             <a href="{{ route('android.download') }}">Android App</a>
             <a href="{{ route('admin.dashboard') }}">Admin</a>
+            <a href="https://buymeacoffee.com/rarecreation" target="_blank" rel="noopener" style="background:linear-gradient(90deg,var(--gold),#ffe8a3);color:var(--navy);padding:8px 18px;border-radius:999px;font-weight:900;margin-left:22px;">☕ Buy Me a Coffee</a>
         </nav>
     </header>
 
