@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureMasjidOwnership;
+use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,8 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->redirectGuestsTo(fn (Request $request): string => route('admin.login'));
         $middleware->alias([
-            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
-            'active' => \App\Http\Middleware\EnsureUserIsActive::class,
+            'admin' => EnsureUserIsAdmin::class,
+            'active' => EnsureUserIsActive::class,
+            'masjid.owner' => EnsureMasjidOwnership::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

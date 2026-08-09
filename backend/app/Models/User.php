@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -14,7 +15,7 @@ class User extends Authenticatable
 
     public const ROLE_OPERATOR = 'operator';
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'is_active'];
+    protected $fillable = ['mosque_setting_id', 'name', 'email', 'password', 'role', 'is_active'];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -30,5 +31,10 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;
+    }
+
+    public function mosqueSetting(): BelongsTo
+    {
+        return $this->belongsTo(MosqueSetting::class);
     }
 }
