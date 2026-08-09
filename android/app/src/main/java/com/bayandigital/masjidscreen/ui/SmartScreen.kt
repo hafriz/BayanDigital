@@ -742,7 +742,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawIslamicStar(col
 
 private fun prayerItems(payload: PrayerResponse) = listOf(
     PrayerItem("subuh", "Subuh", payload.timeline.subuh, payload.masjid.iqamahMinutes["subuh"] ?: 10),
-    PrayerItem("syuruk", "Syuruk", payload.timeline.syuruk ?: "--:--"),
     PrayerItem("zohor", "Zohor", payload.timeline.zohor, payload.masjid.iqamahMinutes["zohor"] ?: 10),
     PrayerItem("asar", "Asar", payload.timeline.asar, payload.masjid.iqamahMinutes["asar"] ?: 10),
     PrayerItem("maghrib", "Maghrib", payload.timeline.maghrib, payload.masjid.iqamahMinutes["maghrib"] ?: 5),

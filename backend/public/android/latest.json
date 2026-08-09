@@ -1,6 +1,6 @@
 {
-  "version_name": "0.10.1",
-  "version_code": 12,
-  "apk_url": "/android/masjid-smart-screen-tv.apk?v=12",
-  "release_notes": "Fixes prayer alert beeps not being audible by routing tones through the media stream instead of the notification stream."
+  "version_name": "0.10.2",
+  "version_code": 13,
+  "apk_url": "/android/masjid-smart-screen-tv.apk?v=13",
+  "release_notes": "Removes Syuruk from the on-screen prayer timeline and fullscreen Jadual Solat view."
 }
