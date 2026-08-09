@@ -70,7 +70,7 @@ sealed interface ScreenState {
     data object Idle : ScreenState
     data class AzanAlert(val prayerName: String) : ScreenState
     data class IqamahCountdown(val prayerName: String, val remainingSeconds: Int) : ScreenState
-    data class SilentMode(val message: String) : ScreenState
+    data class SilentMode(val prayerName: String, val remainingSeconds: Int) : ScreenState
 }
 
 enum class ScreenConnectionStatus { Syncing, Connected, Offline }
@@ -86,8 +86,16 @@ private data class ScreenPalette(
     val muted: Color
 )
 
-private data class PrayerItem(val key: String, val label: String, val time: String)
-private data class NextPrayer(val item: PrayerItem, val remainingSeconds: Long)
+private data class PrayerItem(val key: String, val label: String, val time: String, val iqamahDelayMinutes: Int? = null) {
+    val iqamahTime: LocalTime?
+        get() = iqamahDelayMinutes?.let { delay -> parseTime(time)?.plusMinutes(delay.toLong()) }
+}
+private data class NextPrayer(
+    val item: PrayerItem,
+    val prayerRemainingSeconds: Long,
+    val iqamahRemainingSeconds: Long?,
+    val awaitingIqamah: Boolean = false
+)
 
 @Composable
 fun SmartScreen(
@@ -103,12 +111,17 @@ fun SmartScreen(
             ScreenState.Idle -> DashboardScreen(payload, currentTime, palette, connectionStatus, lastSuccessfulSyncMillis)
             is ScreenState.AzanAlert -> FullScreenMessage("AZAN", screenState.prayerName, palette.surface, palette.accent)
             is ScreenState.IqamahCountdown -> FullScreenMessage(
-                "IQAMAH ${screenState.prayerName.uppercase()}",
-                "${screenState.remainingSeconds / 60}:${(screenState.remainingSeconds % 60).toString().padStart(2, '0')}",
+                "QAMAT ${screenState.prayerName.uppercase()}",
+                formatTimer(screenState.remainingSeconds.toLong()),
                 palette.surface,
                 palette.accent
             )
-            is ScreenState.SilentMode -> FullScreenMessage("SILENT MODE", screenState.message, Color.Black, palette.accent)
+            is ScreenState.SilentMode -> FullScreenMessage(
+                "WAKTU SOLAT ${screenState.prayerName.uppercase()}",
+                formatTimer(screenState.remainingSeconds.toLong()),
+                Color.Black,
+                palette.accent
+            )
         }
     }
 }
@@ -337,19 +350,35 @@ private fun NextPrayerHero(nextPrayer: NextPrayer, palette: ScreenPalette, modif
         }
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("SOLAT SETERUSNYA", color = palette.background.copy(alpha = .7f), fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Text(if (nextPrayer.awaitingIqamah) "MENUNGGU IQAMAH" else "SOLAT SETERUSNYA", color = palette.background.copy(alpha = .7f), fontSize = 12.sp, fontWeight = FontWeight.Black)
                 Box(Modifier.scale(pulse).size(9.dp).clip(CircleShape).background(palette.background))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
                 Text(nextPrayer.item.label, color = palette.background, fontSize = 39.sp, fontWeight = FontWeight.Black)
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("DALAM", color = palette.background.copy(alpha = .62f), fontSize = 11.sp, fontWeight = FontWeight.Black)
-                    Text(formatCountdown(nextPrayer.remainingSeconds), color = palette.background, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Text(if (nextPrayer.awaitingIqamah) "QAMAT DALAM" else "AZAN DALAM", color = palette.background.copy(alpha = .62f), fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        formatTimer(if (nextPrayer.awaitingIqamah) nextPrayer.iqamahRemainingSeconds ?: 0 else nextPrayer.prayerRemainingSeconds),
+                        color = palette.background,
+                        fontSize = 25.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+            }
+            nextPrayer.item.iqamahDelayMinutes?.let { delay ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("AZAN ${formatPrayerTime(nextPrayer.item.time, "24h")}", color = palette.background.copy(alpha = .78f), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "QAMAT +$delay MIN · ${nextPrayer.item.iqamahTime?.format(DateTimeFormatter.ofPattern("HH:mm")) ?: "--:--"} · ${formatTimer(nextPrayer.iqamahRemainingSeconds ?: 0)}",
+                        color = palette.background.copy(alpha = .78f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
             Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(palette.background.copy(alpha = .18f))) {
                 Box(
-                    Modifier.fillMaxWidth(countdownProgress(nextPrayer.remainingSeconds)).fillMaxHeight().clip(CircleShape).background(palette.background.copy(alpha = .72f))
+                    Modifier.fillMaxWidth(countdownProgress(if (nextPrayer.awaitingIqamah) nextPrayer.iqamahRemainingSeconds ?: 0 else nextPrayer.prayerRemainingSeconds)).fillMaxHeight().clip(CircleShape).background(palette.background.copy(alpha = .72f))
                 )
             }
         }
@@ -596,23 +625,31 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawIslamicStar(col
 }
 
 private fun prayerItems(payload: PrayerResponse) = listOf(
-    PrayerItem("subuh", "Subuh", payload.timeline.subuh),
+    PrayerItem("subuh", "Subuh", payload.timeline.subuh, payload.masjid.iqamahMinutes["subuh"] ?: 10),
     PrayerItem("syuruk", "Syuruk", payload.timeline.syuruk ?: "--:--"),
-    PrayerItem("zohor", "Zohor", payload.timeline.zohor),
-    PrayerItem("asar", "Asar", payload.timeline.asar),
-    PrayerItem("maghrib", "Maghrib", payload.timeline.maghrib),
-    PrayerItem("isyak", "Isyak", payload.timeline.isyak)
+    PrayerItem("zohor", "Zohor", payload.timeline.zohor, payload.masjid.iqamahMinutes["zohor"] ?: 10),
+    PrayerItem("asar", "Asar", payload.timeline.asar, payload.masjid.iqamahMinutes["asar"] ?: 10),
+    PrayerItem("maghrib", "Maghrib", payload.timeline.maghrib, payload.masjid.iqamahMinutes["maghrib"] ?: 5),
+    PrayerItem("isyak", "Isyak", payload.timeline.isyak, payload.masjid.iqamahMinutes["isyak"] ?: 10)
 )
 
 private fun calculateNextPrayer(prayers: List<PrayerItem>, currentTime: String): NextPrayer {
     val now = parseTime(currentTime) ?: LocalTime.now()
     val parsed = prayers.mapNotNull { item -> parseTime(item.time)?.let { item to it } }
-    if (parsed.isEmpty()) return NextPrayer(prayers.first(), 0)
+    if (parsed.isEmpty()) return NextPrayer(prayers.first(), 0, null)
+    parsed.lastOrNull { (item, azan) ->
+        val iqamah = item.iqamahTime
+        iqamah != null && !now.isBefore(azan) && now.isBefore(iqamah)
+    }?.let { (item, _) ->
+        val qamatRemaining = Duration.between(now, requireNotNull(item.iqamahTime)).seconds.coerceAtLeast(0)
+        return NextPrayer(item, 0, qamatRemaining, awaitingIqamah = true)
+    }
     val nextToday = parsed.firstOrNull { (_, time) -> time.isAfter(now) }
     val selected = nextToday ?: parsed.first()
     val targetDate = if (nextToday == null) LocalDate.now().plusDays(1) else LocalDate.now()
     val seconds = Duration.between(LocalDateTime.of(LocalDate.now(), now), LocalDateTime.of(targetDate, selected.second)).seconds.coerceAtLeast(0)
-    return NextPrayer(selected.first, seconds)
+    val iqamahSeconds = selected.first.iqamahDelayMinutes?.let { seconds + it * 60L }
+    return NextPrayer(selected.first, seconds, iqamahSeconds)
 }
 
 private fun parseTime(value: String): LocalTime? = runCatching {
@@ -638,10 +675,13 @@ private fun formatLastSync(value: Long, timeFormat: String): String = runCatchin
     Instant.ofEpochMilli(value).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(pattern))
 }.getOrDefault("saved")
 
-private fun formatCountdown(seconds: Long): String {
-    val hours = seconds / 3600
-    val minutes = (seconds % 3600) / 60
-    return if (hours > 0) "${hours}J ${minutes}M" else "${minutes} MINIT"
+private fun formatTimer(seconds: Long): String {
+    val safe = seconds.coerceAtLeast(0)
+    val hours = safe / 3600
+    val minutes = (safe % 3600) / 60
+    val remainder = safe % 60
+    return if (hours > 0) "%02d:%02d:%02d".format(hours, minutes, remainder)
+    else "%02d:%02d".format(minutes, remainder)
 }
 
 private fun countdownProgress(seconds: Long): Float = (1f - (seconds.coerceAtMost(14_400).toFloat() / 14_400f)).coerceIn(.08f, 1f)

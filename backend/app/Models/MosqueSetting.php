@@ -19,6 +19,8 @@ class MosqueSetting extends Model
         'address',
         'prayer_offsets',
         'iqamah_minutes',
+        'prayer_alerts_enabled',
+        'pre_prayer_beep_minutes',
         'silent_mode_minutes',
         'screen_theme',
         'time_format',
@@ -34,6 +36,8 @@ class MosqueSetting extends Model
     protected $casts = [
         'prayer_offsets' => 'array',
         'iqamah_minutes' => 'array',
+        'prayer_alerts_enabled' => 'boolean',
+        'pre_prayer_beep_minutes' => 'integer',
         'silent_mode_minutes' => 'integer',
         'screen_sleep_enabled' => 'boolean',
         'wake_before_subuh_minutes' => 'integer',
