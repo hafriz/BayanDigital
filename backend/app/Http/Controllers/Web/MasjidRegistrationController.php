@@ -36,6 +36,7 @@ class MasjidRegistrationController extends Controller
             ...$validated,
             'zone_code' => strtoupper($validated['zone_code']),
             'public_id' => $this->newPublicId(),
+            'public_slug' => $this->newPublicSlug($validated['name']),
             'status' => 'pending',
             'prayer_offsets' => [],
             'iqamah_minutes' => [
@@ -62,10 +63,23 @@ class MasjidRegistrationController extends Controller
     private function newPublicId(): string
     {
         do {
-            $id = 'MSJ-' . Str::upper(Str::random(8));
+            $id = 'MSJ-'.Str::upper(Str::random(8));
         } while (MosqueSetting::query()->where('public_id', $id)->exists());
 
         return $id;
+    }
+
+    private function newPublicSlug(string $name): string
+    {
+        $base = Str::slug($name) ?: 'masjid';
+        $slug = $base;
+        $suffix = 2;
+
+        while (MosqueSetting::query()->where('public_slug', $slug)->exists()) {
+            $slug = $base.'-'.$suffix++;
+        }
+
+        return $slug;
     }
 
     /** @return array<int, string> */
