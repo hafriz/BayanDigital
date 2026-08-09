@@ -1,6 +1,6 @@
 {
-  "version_name": "0.9.0",
-  "version_code": 10,
-  "apk_url": "/android/masjid-smart-screen-tv.apk?v=10",
-  "release_notes": "Renames the TV app to bayanDigital with matching wording-only branding and adds backend-controlled overnight screen sleep and fixed or pre-Subuh wake scheduling."
+  "version_name": "0.10.0",
+  "version_code": 11,
+  "apk_url": "/android/masjid-smart-screen-tv.apk?v=11",
+  "release_notes": "Adds admin-configurable fullscreen view rotation: a big clock, Pengumuman, Jadual Solat, and Sumbangan views slide one by one when away from prayer time, and a Standard/Big clock style."
 }
