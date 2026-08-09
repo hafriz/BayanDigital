@@ -4,7 +4,7 @@ import android.media.ToneGenerator
 import android.media.AudioManager
 
 class BeepSoundManager {
-    private val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+    private val tone = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
 
     fun azanAlert() = tone.startTone(ToneGenerator.TONE_PROP_ACK, 400)
     fun prePrayerAlert() = tone.startTone(ToneGenerator.TONE_PROP_PROMPT, 300)
