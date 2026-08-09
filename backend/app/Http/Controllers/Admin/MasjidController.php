@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\MosqueSetting;
 use App\Models\User;
+use App\Services\LogoUrlResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,17 +35,19 @@ class MasjidController extends Controller
         return view('admin.masjids.index', compact('masjids', 'search', 'status'));
     }
 
-    public function edit(Request $request, MosqueSetting $masjid): View
+    public function edit(Request $request, MosqueSetting $masjid, LogoUrlResolver $logos): View
     {
         $this->authorizeMasjid($request, $masjid);
 
         return view('admin.masjids.edit', [
             'masjid' => $masjid,
             'jakimZones' => config('jakim.zones', []),
+            'logoUrl' => $logos->resolve($masjid->logo_url),
+            'usingDefaultLogo' => blank($masjid->logo_url),
         ]);
     }
 
-    public function update(Request $request, MosqueSetting $masjid): RedirectResponse
+    public function update(Request $request, MosqueSetting $masjid, LogoUrlResolver $logos): RedirectResponse
     {
         $this->authorizeMasjid($request, $masjid);
         $wasApproved = $masjid->status === 'approved';
@@ -70,7 +73,8 @@ class MasjidController extends Controller
             'iqamah_minutes.isyak' => ['required', 'integer', 'min:0', 'max:120'],
             'screen_theme' => ['required', Rule::in(['emerald', 'midnight', 'sand', 'royal'])],
             'time_format' => ['required', Rule::in(['24h', '12h'])],
-            'logo_url' => ['nullable', 'url:http,https', 'max:255'],
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
+            'use_default_logo' => ['nullable', 'boolean'],
             'donation_qr_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
             'donation_caption' => ['nullable', 'string', 'max:200'],
             'donation_account' => ['nullable', 'string', 'max:150'],
@@ -100,8 +104,17 @@ class MasjidController extends Controller
         $validated['committee'] = collect(preg_split('/\r\n|\r|\n/', $validated['committee'] ?? ''))
             ->map(fn (string $line) => trim($line))->filter()->values()->all();
 
+        $oldLogo = $masjid->logo_url;
+        $newLogo = null;
         $oldImage = $masjid->donation_qr_image;
         $newImage = null;
+
+        if ($request->hasFile('logo')) {
+            $newLogo = $request->file('logo')->store("masjids/{$masjid->public_id}/logo", 'public');
+            $validated['logo_url'] = $newLogo;
+        } elseif ($request->boolean('use_default_logo')) {
+            $validated['logo_url'] = null;
+        }
 
         if ($request->hasFile('donation_qr_image')) {
             $file = $request->file('donation_qr_image');
@@ -113,7 +126,7 @@ class MasjidController extends Controller
             $validated['donation_qr_url'] = null;
         }
 
-        unset($validated['remove_donation_qr']);
+        unset($validated['logo'], $validated['use_default_logo'], $validated['remove_donation_qr']);
 
         try {
             $masjid->update($validated);
@@ -121,12 +134,18 @@ class MasjidController extends Controller
             if ($newImage) {
                 Storage::disk('public')->delete($newImage);
             }
+            if ($newLogo) {
+                Storage::disk('public')->delete($newLogo);
+            }
 
             throw $exception;
         }
 
         if ($oldImage && $oldImage !== $masjid->donation_qr_image) {
             Storage::disk('public')->delete($oldImage);
+        }
+        if ($oldLogo !== $masjid->logo_url && $logos->isLocal($oldLogo)) {
+            Storage::disk('public')->delete($oldLogo);
         }
 
         $message = 'Masjid settings updated.';

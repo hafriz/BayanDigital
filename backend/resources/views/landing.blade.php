@@ -39,6 +39,7 @@
         .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; position: relative; z-index: 1; }
         header { display: flex; align-items: center; justify-content: space-between; padding: 28px 0; }
         .brand { display: flex; align-items: center; color: inherit; font-weight: 900; text-decoration: none; }
+        .brand-logo { display: block; width: 195px; height: 48px; object-fit: contain; object-position: left center; }
         .brand-name { font-size: 25px; font-weight: 650; letter-spacing: -.065em; line-height: 1; }
         .brand-name b { color: var(--gold); font-weight: 950; }
         .nav a { color: var(--cream); text-decoration: none; margin-left: 22px; opacity: .88; font-weight: 700; }
@@ -84,7 +85,8 @@
 <div class="shell">
     <header>
         <a class="brand" href="{{ route('landing') }}" aria-label="bayanDigital home">
-            <span class="brand-name">bayan<b>Digital</b></span>
+            <img class="brand-logo" src="{{ $logoUrl }}" alt="bayanDigital" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+            <span class="brand-name" hidden>bayan<b>Digital</b></span>
         </a>
         <nav class="nav">
             <a href="{{ route('masjids.register') }}">Register</a>

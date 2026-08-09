@@ -8,6 +8,7 @@ use App\Models\ScreenContent;
 use App\Models\ScreenDevice;
 use App\Services\GoogleCalendarScheduleService;
 use App\Services\JakimPrayerTimeService;
+use App\Services\LogoUrlResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +19,8 @@ class MasjidScreenController extends Controller
         Request $request,
         string $publicId,
         JakimPrayerTimeService $service,
-        GoogleCalendarScheduleService $calendar
+        GoogleCalendarScheduleService $calendar,
+        LogoUrlResolver $logos
     ): JsonResponse {
         $token = $request->bearerToken();
         $device = is_string($token) && $token !== ''
@@ -80,7 +82,7 @@ class MasjidScreenController extends Controller
                 'silent_mode_minutes' => $settings->silent_mode_minutes,
                 'screen_theme' => $settings->screen_theme ?: 'emerald',
                 'time_format' => $settings->time_format ?: '24h',
-                'logo_url' => $this->publicUrl($settings->logo_url),
+                'logo_url' => $logos->resolve($settings->logo_url),
                 'donation_qr_url' => $settings->donation_qr_image
                     ? $this->publicUrl(Storage::disk('public')->url($settings->donation_qr_image))
                     : $this->publicUrl($settings->donation_qr_url),

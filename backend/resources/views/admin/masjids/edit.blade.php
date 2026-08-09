@@ -19,7 +19,13 @@
             <div class="field"><label for="pre_prayer_beep_minutes">Pre-prayer beep (minutes before azan)</label><input id="pre_prayer_beep_minutes" name="pre_prayer_beep_minutes" type="number" min="0" max="60" value="{{ old('pre_prayer_beep_minutes', $masjid->pre_prayer_beep_minutes ?? 5) }}" required></div>
             <div class="field full"><label>Iqamah delay after azan (minutes)</label><div style="display:grid;grid-template-columns:repeat(5,minmax(110px,1fr));gap:12px">@foreach(['subuh' => 'Subuh', 'zohor' => 'Zohor', 'asar' => 'Asar', 'maghrib' => 'Maghrib', 'isyak' => 'Isyak'] as $prayer => $label)<div><label for="iqamah_{{ $prayer }}">{{ $label }}</label><input id="iqamah_{{ $prayer }}" name="iqamah_minutes[{{ $prayer }}]" type="number" min="0" max="120" value="{{ old('iqamah_minutes.'.$prayer, data_get($masjid->iqamah_minutes, $prayer, 10)) }}" required></div>@endforeach</div><small>Only the five obligatory prayers are stored; Syuruk and other timeline entries are excluded.</small></div>
             <div class="field"><label for="time_format">Clock format</label><select id="time_format" name="time_format" required><option value="24h" @selected(old('time_format', $masjid->time_format ?: '24h') === '24h')>24-hour — 19:30</option><option value="12h" @selected(old('time_format', $masjid->time_format) === '12h')>12-hour — 7:30 PM</option></select><small>Controls the live clock and all prayer-time cards.</small></div>
-            <div class="field full"><label for="logo_url">Surau / masjid logo or image URL</label><input id="logo_url" name="logo_url" type="url" value="{{ old('logo_url', $masjid->logo_url) }}" placeholder="https://example.org/logo.png"><small>Displayed in the Android TV masthead. Leave empty to use the default bayanDigital wordmark.</small></div>
+            <div class="field full">
+                <label for="logo">Surau / masjid logo</label>
+                <div style="margin:8px 0 14px"><img id="logo_preview" src="{{ $logoUrl }}" alt="{{ $usingDefaultLogo ? 'Default bayanDigital logo' : $masjid->name.' logo' }}" style="display:block;max-width:260px;max-height:110px;object-fit:contain;background:#061626;border-radius:10px;padding:10px"></div>
+                <input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/gif,image/webp" aria-describedby="logo_help">
+                <small id="logo_help">Upload a JPG, PNG, GIF, or WebP image up to 2 MB. Uploading a new image safely replaces the current local logo.</small>
+                @if(! $usingDefaultLogo)<label style="display:flex;align-items:center;gap:8px;margin-top:12px"><input name="use_default_logo" type="checkbox" value="1" style="width:auto"> Revert to the default bayanDigital logo</label>@endif
+            </div>
             <div class="field full">
                 <label for="donation_qr_image">Donation QR image</label>
                 <input id="donation_qr_image" name="donation_qr_image" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="donation_qr_help">
@@ -61,6 +67,13 @@
 
 @push('scripts')
 <script>
+document.getElementById('logo').addEventListener('change', function () {
+    const preview = document.getElementById('logo_preview');
+    const file = this.files && this.files[0];
+    if (!file) return;
+    preview.src = URL.createObjectURL(file);
+    preview.onload = () => URL.revokeObjectURL(preview.src);
+});
 document.getElementById('donation_qr_image').addEventListener('change', function () {
     const preview = document.getElementById('donation_qr_preview');
     const file = this.files && this.files[0];
