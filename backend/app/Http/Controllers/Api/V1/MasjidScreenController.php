@@ -6,8 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\MosqueSetting;
 use App\Models\ScreenContent;
 use App\Models\ScreenDevice;
-use App\Services\JakimPrayerTimeService;
 use App\Services\GoogleCalendarScheduleService;
+use App\Services\JakimPrayerTimeService;
+use App\Services\LogoUrlResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,7 +18,8 @@ class MasjidScreenController extends Controller
         Request $request,
         string $publicId,
         JakimPrayerTimeService $service,
-        GoogleCalendarScheduleService $calendar
+        GoogleCalendarScheduleService $calendar,
+        LogoUrlResolver $logos
     ): JsonResponse
     {
         $token = $request->bearerToken();
@@ -78,7 +80,7 @@ class MasjidScreenController extends Controller
                 'silent_mode_minutes' => $settings->silent_mode_minutes,
                 'screen_theme' => $settings->screen_theme ?: 'emerald',
                 'time_format' => $settings->time_format ?: '24h',
-                'logo_url' => $this->publicUrl($settings->logo_url),
+                'logo_url' => $logos->resolve($settings->logo_url),
                 'screen_sleep_enabled' => (bool) $settings->screen_sleep_enabled,
                 'screen_sleep_time' => substr((string) $settings->screen_sleep_time, 0, 5),
                 'screen_wake_mode' => $settings->screen_wake_mode ?: 'fixed',

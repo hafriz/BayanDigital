@@ -4,7 +4,7 @@
 @section('top-action')<div class="actions-inline">@if(auth()->user()->isAdmin())<a class="button secondary" href="{{ route('admin.masjids.devices.index', $masjid) }}">Paired TVs</a>@endif<a class="button" href="{{ route('admin.masjids.contents.index', $masjid) }}">Manage TV content</a></div>@endsection
 @section('content')
 <section class="panel"><div class="panel-body">
-    <form method="POST" action="{{ route('admin.masjids.update', $masjid) }}">@csrf @method('PUT')
+    <form method="POST" action="{{ route('admin.masjids.update', $masjid) }}" enctype="multipart/form-data">@csrf @method('PUT')
         <div class="form-grid">
             <div class="field"><label for="name">Display name</label><input id="name" name="name" value="{{ old('name', $masjid->name) }}" required></div>
             <div class="field"><label for="type">Location type</label><select id="type" name="type" required><option value="masjid" @selected(old('type', $masjid->type) === 'masjid')>Masjid</option><option value="surau" @selected(old('type', $masjid->type) === 'surau')>Surau</option></select></div>
@@ -15,7 +15,13 @@
             <div class="field"><label for="contact_email">Contact email</label><input id="contact_email" name="contact_email" type="email" value="{{ old('contact_email', $masjid->contact_email) }}"></div>
             <div class="field"><label for="silent_mode_minutes">Silent mode after prayer (minutes)</label><input id="silent_mode_minutes" name="silent_mode_minutes" type="number" min="0" max="120" value="{{ old('silent_mode_minutes', $masjid->silent_mode_minutes) }}" required></div>
             <div class="field"><label for="time_format">Clock format</label><select id="time_format" name="time_format" required><option value="24h" @selected(old('time_format', $masjid->time_format ?: '24h') === '24h')>24-hour — 19:30</option><option value="12h" @selected(old('time_format', $masjid->time_format) === '12h')>12-hour — 7:30 PM</option></select><small>Controls the live clock and all prayer-time cards.</small></div>
-            <div class="field full"><label for="logo_url">Surau / masjid logo or image URL</label><input id="logo_url" name="logo_url" type="url" value="{{ old('logo_url', $masjid->logo_url) }}" placeholder="https://example.org/logo.png"><small>Displayed in the Android TV masthead. Leave empty to use the default bayanDigital wordmark.</small></div>
+            <div class="field full">
+                <label for="logo">Surau / masjid logo</label>
+                <div style="margin:8px 0 14px"><img src="{{ $logoUrl }}" alt="{{ $usingDefaultLogo ? 'Default bayanDigital logo' : $masjid->name.' logo' }}" style="display:block;max-width:260px;max-height:110px;object-fit:contain;background:#061626;border-radius:10px;padding:10px"></div>
+                <input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/gif,image/webp">
+                <small>Upload a JPG, PNG, GIF, or WebP image up to 2 MB. Uploading a new image safely replaces the current local logo.</small>
+                @if(! $usingDefaultLogo)<label style="display:flex;align-items:center;gap:8px;margin-top:12px"><input name="use_default_logo" type="checkbox" value="1" style="width:auto"> Revert to the default bayanDigital logo</label>@endif
+            </div>
             <div class="field full"><label for="google_calendar_ics_url">Public Google Calendar iCal address</label><input id="google_calendar_ics_url" name="google_calendar_ics_url" type="url" value="{{ old('google_calendar_ics_url', $masjid->google_calendar_ics_url) }}" placeholder="https://calendar.google.com/calendar/ical/.../public/basic.ics"><small>Optional. In Google Calendar, make the calendar public, then copy “Public address in iCal format” from Integrate calendar. Upcoming events become timetable cards automatically.</small></div>
             <div class="field"><label for="screen_sleep_enabled">Automatic screen schedule</label><select id="screen_sleep_enabled" name="screen_sleep_enabled" required><option value="0" @selected((string) old('screen_sleep_enabled', (int) $masjid->screen_sleep_enabled) === '0')>Disabled — always on</option><option value="1" @selected((string) old('screen_sleep_enabled', (int) $masjid->screen_sleep_enabled) === '1')>Enabled</option></select><small>Blackens the display and allows Android TV to enter standby overnight.</small></div>
             <div class="field"><label for="screen_sleep_time">Screen off time</label><input id="screen_sleep_time" name="screen_sleep_time" type="time" value="{{ old('screen_sleep_time', substr($masjid->screen_sleep_time ?: '22:00', 0, 5)) }}" required></div>

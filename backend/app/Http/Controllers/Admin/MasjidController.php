@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MosqueSetting;
+use App\Services\LogoUrlResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class MasjidController extends Controller
@@ -30,15 +32,17 @@ class MasjidController extends Controller
         return view('admin.masjids.index', compact('masjids', 'search', 'status'));
     }
 
-    public function edit(MosqueSetting $masjid): View
+    public function edit(MosqueSetting $masjid, LogoUrlResolver $logos): View
     {
         return view('admin.masjids.edit', [
             'masjid' => $masjid,
             'jakimZones' => config('jakim.zones', []),
+            'logoUrl' => $logos->resolve($masjid->logo_url),
+            'usingDefaultLogo' => blank($masjid->logo_url),
         ]);
     }
 
-    public function update(Request $request, MosqueSetting $masjid): RedirectResponse
+    public function update(Request $request, MosqueSetting $masjid, LogoUrlResolver $logos): RedirectResponse
     {
         $zoneCodes = collect(config('jakim.zones', []))->flatMap(fn (array $zones) => array_keys($zones))->all();
         $validated = $request->validate([
@@ -53,7 +57,8 @@ class MasjidController extends Controller
             'silent_mode_minutes' => ['required', 'integer', 'min:0', 'max:120'],
             'screen_theme' => ['required', Rule::in(['emerald', 'midnight', 'sand', 'royal'])],
             'time_format' => ['required', Rule::in(['24h', '12h'])],
-            'logo_url' => ['nullable', 'url:http,https', 'max:255'],
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
+            'use_default_logo' => ['nullable', 'boolean'],
             'google_calendar_ics_url' => [
                 'nullable',
                 'url:http,https',
@@ -72,7 +77,33 @@ class MasjidController extends Controller
             'wake_before_subuh_minutes' => ['required', 'integer', 'min:0', 'max:180'],
         ]);
 
-        $masjid->update($validated);
+        unset($validated['logo'], $validated['use_default_logo']);
+
+        $previousLogo = $masjid->logo_url;
+        $newLogo = null;
+
+        if ($request->hasFile('logo')) {
+            $newLogo = $request->file('logo')->store("masjids/{$masjid->public_id}/logo", 'public');
+            $validated['logo_url'] = $newLogo;
+        } elseif ($request->boolean('use_default_logo')) {
+            $validated['logo_url'] = null;
+        }
+
+        try {
+            $masjid->update($validated);
+        } catch (\Throwable $exception) {
+            if ($newLogo) {
+                Storage::disk('public')->delete($newLogo);
+            }
+
+            throw $exception;
+        }
+
+        if (array_key_exists('logo_url', $validated)
+            && $previousLogo !== $validated['logo_url']
+            && $logos->isLocal($previousLogo)) {
+            Storage::disk('public')->delete($previousLogo);
+        }
 
         return redirect()->route('admin.masjids.index')->with('success', 'Masjid settings updated.');
     }
