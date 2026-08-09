@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MosqueSetting extends Model
 {
@@ -47,5 +47,10 @@ class MosqueSetting extends Model
     public function screenDevices(): HasMany
     {
         return $this->hasMany(ScreenDevice::class);
+    }
+
+    public function committeeMembers(): HasMany
+    {
+        return $this->hasMany(MosqueCommitteeMember::class);
     }
 }
