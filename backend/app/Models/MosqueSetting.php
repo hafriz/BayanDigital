@@ -60,6 +60,11 @@ class MosqueSetting extends Model
         return $this->hasMany(ScreenDevice::class);
     }
 
+    public function committeeMembers(): HasMany
+    {
+        return $this->hasMany(MosqueCommitteeMember::class);
+    }
+
     public function users(): HasMany
     {
         return $this->hasMany(User::class);

@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\BackupController as AdminBackupController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ManualController as AdminManualController;
 use App\Http\Controllers\Admin\MasjidController as AdminMasjidController;
+use App\Http\Controllers\Admin\MosqueCommitteeMemberController as AdminMosqueCommitteeMemberController;
 use App\Http\Controllers\Admin\ScreenContentController as AdminScreenContentController;
 use App\Http\Controllers\Admin\ScreenDeviceController as AdminScreenDeviceController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -34,6 +35,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('masjid.owner')->group(function () {
             Route::resource('masjids', AdminMasjidController::class)->only(['index', 'edit', 'update']);
             Route::resource('masjids.contents', AdminScreenContentController::class)->except(['show']);
+            Route::resource('masjids.committee-members', AdminMosqueCommitteeMemberController::class)
+                ->except(['show'])
+                ->scoped();
         });
         Route::middleware(['admin', 'masjid.owner'])->group(function () {
             Route::get('masjids/{masjid}/devices', [AdminScreenDeviceController::class, 'index'])->name('masjids.devices.index');
