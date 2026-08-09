@@ -17,7 +17,19 @@
             <div class="field"><label for="silent_mode_minutes">Silent mode after prayer (minutes)</label><input id="silent_mode_minutes" name="silent_mode_minutes" type="number" min="0" max="120" value="{{ old('silent_mode_minutes', $masjid->silent_mode_minutes) }}" required></div>
             <div class="field"><label for="time_format">Clock format</label><select id="time_format" name="time_format" required><option value="24h" @selected(old('time_format', $masjid->time_format ?: '24h') === '24h')>24-hour — 19:30</option><option value="12h" @selected(old('time_format', $masjid->time_format) === '12h')>12-hour — 7:30 PM</option></select><small>Controls the live clock and all prayer-time cards.</small></div>
             <div class="field full"><label for="logo_url">Surau / masjid logo or image URL</label><input id="logo_url" name="logo_url" type="url" value="{{ old('logo_url', $masjid->logo_url) }}" placeholder="https://example.org/logo.png"><small>Displayed in the Android TV masthead. Leave empty to use the default bayanDigital wordmark.</small></div>
-            <div class="field full"><label for="donation_qr_url">Donation QR code image URL</label><input id="donation_qr_url" name="donation_qr_url" type="url" value="{{ old('donation_qr_url', $masjid->donation_qr_url) }}" placeholder="https://example.org/donation-qr.png"></div>
+            <div class="field full">
+                <label for="donation_qr_image">Donation QR image</label>
+                <input id="donation_qr_image" name="donation_qr_image" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="donation_qr_help">
+                <small id="donation_qr_help">JPEG, PNG, or WebP, up to 2 MB. A square QR image works best.</small>
+                <div style="margin-top:12px">
+                    <img id="donation_qr_preview" src="{{ $masjid->donation_qr_image ? Storage::disk('public')->url($masjid->donation_qr_image) : $masjid->donation_qr_url }}" alt="Donation QR image preview" style="{{ $masjid->donation_qr_image || $masjid->donation_qr_url ? '' : 'display:none;' }}width:min(240px,100%);aspect-ratio:1;object-fit:contain;border-radius:14px;border:1px solid #d1d5db;background:#fff;padding:8px">
+                </div>
+                @if($masjid->donation_qr_image || $masjid->donation_qr_url)
+                    <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><input type="checkbox" name="remove_donation_qr" value="1" style="width:auto"> Delete the current donation QR image</label>
+                @endif
+            </div>
+            <div class="field"><label for="donation_caption">Donation caption</label><input id="donation_caption" name="donation_caption" maxlength="200" value="{{ old('donation_caption', $masjid->donation_caption) }}" placeholder="Support our masjid programmes"></div>
+            <div class="field"><label for="donation_account">Donation account</label><input id="donation_account" name="donation_account" maxlength="150" value="{{ old('donation_account', $masjid->donation_account) }}" placeholder="Bank name · 1234 5678 90"></div>
             <div class="field full"><label for="committee">Committee members</label><textarea id="committee" name="committee" placeholder="Chairperson — Ahmad bin Ali&#10;Treasurer — Fatimah Ahmad">{{ old('committee', implode("\n", $masjid->committee ?? [])) }}</textarea><small>Enter one role and member per line.</small></div>
             <div class="field full"><label for="google_calendar_ics_url">Public Google Calendar iCal address</label><input id="google_calendar_ics_url" name="google_calendar_ics_url" type="url" value="{{ old('google_calendar_ics_url', $masjid->google_calendar_ics_url) }}" placeholder="https://calendar.google.com/calendar/ical/.../public/basic.ics"><small>Optional. In Google Calendar, make the calendar public, then copy “Public address in iCal format” from Integrate calendar. Upcoming events become timetable cards automatically.</small></div>
             <div class="field"><label for="screen_sleep_enabled">Automatic screen schedule</label><select id="screen_sleep_enabled" name="screen_sleep_enabled" required><option value="0" @selected((string) old('screen_sleep_enabled', (int) $masjid->screen_sleep_enabled) === '0')>Disabled — always on</option><option value="1" @selected((string) old('screen_sleep_enabled', (int) $masjid->screen_sleep_enabled) === '1')>Enabled</option></select><small>Blackens the display and allows Android TV to enter standby overnight.</small></div>
@@ -41,3 +53,16 @@
     </form>
 </div></section>
 @endsection
+
+@push('scripts')
+<script>
+document.getElementById('donation_qr_image').addEventListener('change', function () {
+    const preview = document.getElementById('donation_qr_preview');
+    const file = this.files && this.files[0];
+    if (!file) return;
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+    preview.onload = () => URL.revokeObjectURL(preview.src);
+});
+</script>
+@endpush

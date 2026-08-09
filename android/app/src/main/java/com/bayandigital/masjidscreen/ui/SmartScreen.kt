@@ -130,11 +130,8 @@ private fun DashboardScreen(
     val featureIndex = if (featuredItems.isEmpty()) 0 else (second / 10) % featuredItems.size
     val featured = featuredItems.getOrNull(featureIndex) ?: welcomeContent(payload.masjid.name)
     val schedules = payload.announcements.filter { it.type == "schedule" }
-    val visuals = payload.announcements.filter { it.type in listOf("image", "slide") && !it.mediaPath.isNullOrBlank() }
-    val visual = visuals.getOrNull(if (visuals.isEmpty()) 0 else (second / 10) % visuals.size)
-        ?: AnnouncementDto("image", "Maklumat Komuniti", "Media dan poster aktiviti akan dipaparkan di sini.")
     val alternateItems = payload.announcements.filter {
-        it.type != "ticker" && it != featured && it != visual && it.type != "schedule"
+        it.type != "ticker" && it != featured && it.type != "schedule"
     }
     val scheduleOrAlternate = schedules.getOrNull(if (schedules.isEmpty()) 0 else (second / 12) % schedules.size)
         ?: alternateItems.getOrNull(if (alternateItems.isEmpty()) 0 else (second / 12) % alternateItems.size)
@@ -186,9 +183,7 @@ private fun DashboardScreen(
                     Crossfade(targetState = scheduleOrAlternate, animationSpec = tween(600), label = "schedule-or-info", modifier = Modifier.weight(1f).fillMaxWidth()) {
                         if (it.type == "schedule") ScheduleCard(it, palette) else AlternateInfoCard(it, palette)
                     }
-                    Crossfade(targetState = visual, animationSpec = tween(600), label = "visual-information", modifier = Modifier.weight(1f).fillMaxWidth()) {
-                        VisualContentCard(it, palette)
-                    }
+                    DonationCard(payload, palette, Modifier.weight(1f).fillMaxWidth())
                 }
             }
 
@@ -547,6 +542,62 @@ private fun VisualContentCard(content: AnnouncementDto, palette: ScreenPalette) 
 }
 
 @Composable
+private fun DonationCard(payload: PrayerResponse, palette: ScreenPalette, modifier: Modifier = Modifier) {
+    Row(
+        modifier.fillMaxSize()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Brush.linearGradient(listOf(palette.surfaceAlt, palette.surface)))
+            .border(1.dp, palette.text.copy(alpha = .08f), RoundedCornerShape(24.dp))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            Modifier.fillMaxHeight().width(112.dp).clip(RoundedCornerShape(14.dp)).background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            if (payload.masjid.donationQrUrl.isNullOrBlank()) {
+                Text(
+                    "QR SUMBANGAN\nBELUM DISEDIAKAN",
+                    color = palette.background,
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(10.dp)
+                )
+            } else {
+                SubcomposeAsyncImage(
+                    model = payload.masjid.donationQrUrl,
+                    contentDescription = "Kod QR sumbangan untuk ${payload.masjid.name}",
+                    modifier = Modifier.fillMaxSize().padding(5.dp),
+                    contentScale = ContentScale.Fit,
+                    loading = { VisualPlaceholder(palette) },
+                    error = { Text("QR SUMBANGAN\nTIDAK DAPAT DIMUAT", color = palette.background, fontSize = 9.sp, textAlign = TextAlign.Center) }
+                )
+            }
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+            ContentBadge("donation", palette)
+            Spacer(Modifier.height(7.dp))
+            Text(
+                payload.masjid.donationCaption?.takeIf { it.isNotBlank() } ?: "Sumbangan untuk masjid",
+                color = palette.text,
+                fontSize = 17.sp,
+                lineHeight = 20.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            payload.masjid.donationAccount?.takeIf { it.isNotBlank() }?.let {
+                Spacer(Modifier.height(5.dp))
+                Text(it, color = palette.muted, fontSize = 12.sp, lineHeight = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+@Composable
 private fun VisualPlaceholder(palette: ScreenPalette) {
     Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(palette.surfaceAlt, palette.backgroundEnd)))) {
         Canvas(Modifier.align(Alignment.CenterEnd).size(150.dp)) { drawIslamicStar(palette.accent.copy(alpha = .13f)) }
@@ -647,6 +698,7 @@ private fun formatCountdown(seconds: Long): String {
 private fun countdownProgress(seconds: Long): Float = (1f - (seconds.coerceAtMost(14_400).toFloat() / 14_400f)).coerceIn(.08f, 1f)
 
 private fun contentTypeLabel(type: String): String = when (type) {
+    "donation" -> "SUMBANGAN"
     "schedule" -> "JADUAL USTAZ"
     "slide" -> "MAKLUMAT"
     "image" -> "GALERI"

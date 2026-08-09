@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MosqueSetting;
 use App\Services\JakimPrayerTimeService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Storage;
 
 class MasjidPortalController extends Controller
 {
@@ -20,6 +21,9 @@ class MasjidPortalController extends Controller
             'masjid' => $masjid,
             'prayerTime' => $prayerTimes->today($masjid->zone_code, $masjid->prayer_offsets ?? []),
             'announcements' => $masjid->screenContents()->currentlyActive()->where('type', 'announcement')->orderBy('sort_order')->get(),
+            'donationQrUrl' => $masjid->donation_qr_image
+                ? Storage::disk('public')->url($masjid->donation_qr_image)
+                : $masjid->donation_qr_url,
         ]);
     }
 }

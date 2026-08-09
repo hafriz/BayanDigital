@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -62,7 +63,10 @@ class MasjidController extends Controller
             'screen_theme' => ['required', Rule::in(['emerald', 'midnight', 'sand', 'royal'])],
             'time_format' => ['required', Rule::in(['24h', '12h'])],
             'logo_url' => ['nullable', 'url:http,https', 'max:255'],
-            'donation_qr_url' => ['nullable', 'url:http,https', 'max:255'],
+            'donation_qr_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+            'donation_caption' => ['nullable', 'string', 'max:200'],
+            'donation_account' => ['nullable', 'string', 'max:150'],
+            'remove_donation_qr' => ['nullable', 'boolean'],
             'committee' => ['nullable', 'string', 'max:3000'],
             'google_calendar_ics_url' => [
                 'nullable',
@@ -85,7 +89,35 @@ class MasjidController extends Controller
         $validated['public_slug'] = Str::lower($validated['public_slug']);
         $validated['committee'] = collect(preg_split('/\r\n|\r|\n/', $validated['committee'] ?? ''))
             ->map(fn (string $line) => trim($line))->filter()->values()->all();
-        $masjid->update($validated);
+
+        $oldImage = $masjid->donation_qr_image;
+        $newImage = null;
+
+        if ($request->hasFile('donation_qr_image')) {
+            $file = $request->file('donation_qr_image');
+            $newImage = $file->storeAs('donation-qr', Str::uuid().'.'.$file->extension(), 'public');
+            $validated['donation_qr_image'] = $newImage;
+            $validated['donation_qr_url'] = null;
+        } elseif ($request->boolean('remove_donation_qr')) {
+            $validated['donation_qr_image'] = null;
+            $validated['donation_qr_url'] = null;
+        }
+
+        unset($validated['remove_donation_qr']);
+
+        try {
+            $masjid->update($validated);
+        } catch (\Throwable $exception) {
+            if ($newImage) {
+                Storage::disk('public')->delete($newImage);
+            }
+
+            throw $exception;
+        }
+
+        if ($oldImage && $oldImage !== $masjid->donation_qr_image) {
+            Storage::disk('public')->delete($oldImage);
+        }
 
         $message = 'Masjid settings updated.';
         if (! $wasApproved && $masjid->status === 'approved' && $masjid->contact_email) {
