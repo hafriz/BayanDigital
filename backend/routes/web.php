@@ -1,15 +1,16 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\Admin\BackupController as AdminBackupController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\ManualController as AdminManualController;
 use App\Http\Controllers\Admin\MasjidController as AdminMasjidController;
 use App\Http\Controllers\Admin\ScreenContentController as AdminScreenContentController;
 use App\Http\Controllers\Admin\ScreenDeviceController as AdminScreenDeviceController;
-use App\Http\Controllers\Admin\BackupController as AdminBackupController;
-use App\Http\Controllers\Admin\ManualController as AdminManualController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Web\AndroidDownloadController;
 use App\Http\Controllers\Web\LandingPageController;
+use App\Http\Controllers\Web\MasjidPortalController;
 use App\Http\Controllers\Web\MasjidRegistrationController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +19,7 @@ Route::get('/android/download', AndroidDownloadController::class)->name('android
 Route::get('/register', [MasjidRegistrationController::class, 'create'])->name('masjids.register');
 Route::post('/register', [MasjidRegistrationController::class, 'store'])->name('masjids.store');
 Route::get('/register/{publicId}/complete', [MasjidRegistrationController::class, 'registered'])->name('masjids.registered');
+Route::get('/masjids/{publicId}', MasjidPortalController::class)->name('masjids.show');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('guest')->group(function () {

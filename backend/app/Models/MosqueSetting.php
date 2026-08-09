@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MosqueSetting extends Model
 {
@@ -23,6 +23,9 @@ class MosqueSetting extends Model
         'screen_theme',
         'time_format',
         'logo_url',
+        'donation_qr_image',
+        'donation_caption',
+        'donation_account',
         'google_calendar_ics_url',
         'screen_sleep_enabled',
         'screen_sleep_time',
