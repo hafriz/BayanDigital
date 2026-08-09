@@ -27,6 +27,7 @@ import com.bayandigital.masjidscreen.data.PairingRequestBody
 import com.bayandigital.masjidscreen.data.PairingRequestResponse
 import com.bayandigital.masjidscreen.data.PairingStatusResponse
 import com.bayandigital.masjidscreen.data.PrayerResponse
+import com.bayandigital.masjidscreen.audio.BeepSoundManager
 import com.bayandigital.masjidscreen.network.PrayerApi
 import com.bayandigital.masjidscreen.network.PrayerRepository
 import com.bayandigital.masjidscreen.setup.MasjidSetupStore
@@ -38,6 +39,9 @@ import com.bayandigital.masjidscreen.ui.SmartScreen
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.io.IOException
 import java.time.LocalTime
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.Duration
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -49,11 +53,14 @@ import retrofit2.HttpException
 import retrofit2.Retrofit
 
 class MainActivity : ComponentActivity() {
+    private lateinit var beepSoundManager: BeepSoundManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         wakeDisplay()
 
         val preferences = getSharedPreferences("screen_setup", MODE_PRIVATE)
+        beepSoundManager = BeepSoundManager()
         val store = MasjidSetupStore(preferences)
         val json = Json { ignoreUnknownKeys = true }
         val api = Retrofit.Builder()
@@ -124,6 +131,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val prayerScreenState = payload?.let { prayerState(it, currentTime) } ?: ScreenState.Idle
+            LaunchedEffect(payload, currentTime) {
+                val currentPayload = payload ?: return@LaunchedEffect
+                if (currentPayload.masjid.prayerAlertsEnabled) {
+                    emitDuePrayerAlerts(currentPayload, currentTime, preferences)
+                }
+            }
+
             if (scheduledSleep) {
                 BackHandler { }
                 Box(Modifier.fillMaxSize().background(Color.Black))
@@ -132,7 +147,7 @@ class MainActivity : ComponentActivity() {
                 SmartScreen(
                     payload = screenPayload,
                     currentTime = currentTime,
-                    state = ScreenState.Idle,
+                    state = prayerScreenState,
                     connectionStatus = connectionStatus,
                     lastSuccessfulSyncMillis = lastSuccessfulSyncMillis
                 )
@@ -214,6 +229,79 @@ class MainActivity : ComponentActivity() {
         if (hasFocus) enableImmersiveMode()
     }
 
+    override fun onDestroy() {
+        beepSoundManager.release()
+        super.onDestroy()
+    }
+
+    private fun emitDuePrayerAlerts(
+        payload: PrayerResponse,
+        clock: String,
+        preferences: android.content.SharedPreferences
+    ) {
+        val now = LocalDateTime.of(runCatching { LocalDate.parse(payload.date.gregorian) }.getOrDefault(LocalDate.now()), parseClock(clock))
+        prayerOccurrences(payload).forEach { (key, _, azan, iqamah) ->
+            val occurrence = "${now.toLocalDate()}-$key"
+            fun emit(event: String, target: LocalDateTime, sound: () -> Unit) {
+                val seconds = Duration.between(target, now).seconds
+                val eventKey = "prayer_alert:$occurrence:$event"
+                if (seconds in 0..2 && !preferences.getBoolean(eventKey, false)) {
+                    sound()
+                    preferences.edit().putBoolean(eventKey, true).apply()
+                }
+            }
+            emit("pre", azan.minusMinutes(payload.masjid.prePrayerBeepMinutes.toLong())) { beepSoundManager.prePrayerAlert() }
+            emit("azan", azan) { beepSoundManager.azanAlert() }
+            emit("countdown", azan.plusSeconds(AZAN_ALERT_SECONDS)) { beepSoundManager.countdownStarted() }
+            emit("one-minute", iqamah.minusMinutes(1)) { beepSoundManager.oneMinuteRemaining() }
+            emit("final-ten", iqamah.minusSeconds(10)) { beepSoundManager.finalTenSecondDoubleBeep() }
+            emit("iqamah", iqamah) { beepSoundManager.iqamahAlert() }
+        }
+    }
+
+    private fun prayerState(payload: PrayerResponse, clock: String): ScreenState {
+        val date = runCatching { LocalDate.parse(payload.date.gregorian) }.getOrDefault(LocalDate.now())
+        val now = LocalDateTime.of(date, parseClock(clock))
+        prayerOccurrences(payload).lastOrNull { (_, _, azan, iqamah) -> !now.isBefore(azan) && now.isBefore(iqamah) }
+            ?.let { (_, label, azan, iqamah) ->
+                val sinceAzan = Duration.between(azan, now).seconds
+                return if (sinceAzan < AZAN_ALERT_SECONDS) ScreenState.AzanAlert(label)
+                else ScreenState.IqamahCountdown(label, Duration.between(now, iqamah).seconds.coerceAtLeast(0).toInt())
+            }
+        prayerOccurrences(payload).lastOrNull { (_, _, _, iqamah) ->
+            !now.isBefore(iqamah) && now.isBefore(iqamah.plusMinutes(payload.masjid.silentModeMinutes.toLong()))
+        }?.let { (_, label, _, iqamah) ->
+            val solatEnds = iqamah.plusMinutes(payload.masjid.silentModeMinutes.toLong())
+            return ScreenState.SilentMode(label, Duration.between(now, solatEnds).seconds.coerceAtLeast(0).toInt())
+        }
+        return ScreenState.Idle
+    }
+
+    private data class PrayerOccurrence(
+        val key: String,
+        val label: String,
+        val azan: LocalDateTime,
+        val iqamah: LocalDateTime
+    )
+
+    private fun prayerOccurrences(payload: PrayerResponse): List<PrayerOccurrence> {
+        val date = runCatching { LocalDate.parse(payload.date.gregorian) }.getOrDefault(LocalDate.now())
+        return listOf(
+            Triple("subuh", "Subuh", payload.timeline.subuh),
+            Triple("zohor", "Zohor", payload.timeline.zohor),
+            Triple("asar", "Asar", payload.timeline.asar),
+            Triple("maghrib", "Maghrib", payload.timeline.maghrib),
+            Triple("isyak", "Isyak", payload.timeline.isyak)
+        ).map { (key, label, value) ->
+            val azan = LocalDateTime.of(date, parseClock(value))
+            PrayerOccurrence(key, label, azan, azan.plusMinutes((payload.masjid.iqamahMinutes[key] ?: 0).toLong()))
+        }
+    }
+
+    private fun parseClock(value: String): LocalTime = runCatching { LocalTime.parse(value, CLOCK_FORMAT) }
+        .recoverCatching { LocalTime.parse(value, DateTimeFormatter.ofPattern("HH:mm")) }
+        .getOrDefault(LocalTime.MIDNIGHT)
+
     private fun enableImmersiveMode() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
@@ -269,6 +357,7 @@ class MainActivity : ComponentActivity() {
         private const val API_BASE_URL = "https://bayandigital.rarecreation.xyz/"
         private const val CONNECTED_REFRESH_MILLIS = 60_000L
         private const val OFFLINE_RETRY_MILLIS = 30_000L
+        private const val AZAN_ALERT_SECONDS = 30L
         private val CLOCK_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
     }
 }
