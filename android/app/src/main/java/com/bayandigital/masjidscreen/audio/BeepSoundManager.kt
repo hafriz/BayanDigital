@@ -7,6 +7,8 @@ class BeepSoundManager {
     private val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
 
     fun azanAlert() = tone.startTone(ToneGenerator.TONE_PROP_ACK, 400)
+    fun prePrayerAlert() = tone.startTone(ToneGenerator.TONE_PROP_PROMPT, 300)
+    fun iqamahAlert() = tone.startTone(ToneGenerator.TONE_CDMA_ALERT_AUTOREDIAL_LITE, 500)
     fun countdownStarted() = tone.startTone(ToneGenerator.TONE_PROP_BEEP, 250)
     fun oneMinuteRemaining() = tone.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 350)
 

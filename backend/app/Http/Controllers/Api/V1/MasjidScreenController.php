@@ -11,6 +11,7 @@ use App\Services\JakimPrayerTimeService;
 use App\Services\LogoUrlResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class MasjidScreenController extends Controller
 {
@@ -20,8 +21,7 @@ class MasjidScreenController extends Controller
         JakimPrayerTimeService $service,
         GoogleCalendarScheduleService $calendar,
         LogoUrlResolver $logos
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $token = $request->bearerToken();
         $device = is_string($token) && $token !== ''
             ? ScreenDevice::query()->where('token_hash', hash('sha256', $token))->first()
@@ -77,12 +77,21 @@ class MasjidScreenController extends Controller
                 'name' => $settings->name,
                 'zone_code' => $settings->zone_code,
                 'iqamah_minutes' => $settings->iqamah_minutes ?? [],
+                'prayer_alerts_enabled' => (bool) $settings->prayer_alerts_enabled,
+                'pre_prayer_beep_minutes' => (int) $settings->pre_prayer_beep_minutes,
                 'silent_mode_minutes' => $settings->silent_mode_minutes,
                 'screen_theme' => $settings->screen_theme ?: 'emerald',
                 'time_format' => $settings->time_format ?: '24h',
                 'logo_url' => $logos->resolve($settings->logo_url),
+                'donation_qr_url' => $settings->donation_qr_image
+                    ? $this->publicUrl(Storage::disk('public')->url($settings->donation_qr_image))
+                    : $this->publicUrl($settings->donation_qr_url),
+                'donation_caption' => $settings->donation_caption,
+                'donation_account' => $settings->donation_account,
                 'screen_sleep_enabled' => (bool) $settings->screen_sleep_enabled,
+                'screen_sleep_mode' => $settings->screen_sleep_mode ?: 'fixed',
                 'screen_sleep_time' => substr((string) $settings->screen_sleep_time, 0, 5),
+                'sleep_after_isyak_minutes' => (int) ($settings->sleep_after_isyak_minutes ?? 30),
                 'screen_wake_mode' => $settings->screen_wake_mode ?: 'fixed',
                 'screen_wake_time' => substr((string) $settings->screen_wake_time, 0, 5),
                 'wake_before_subuh_minutes' => (int) ($settings->wake_before_subuh_minutes ?? 30),

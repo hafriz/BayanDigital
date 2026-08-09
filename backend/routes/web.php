@@ -1,15 +1,17 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\Admin\BackupController as AdminBackupController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\ManualController as AdminManualController;
 use App\Http\Controllers\Admin\MasjidController as AdminMasjidController;
+use App\Http\Controllers\Admin\MosqueCommitteeMemberController as AdminMosqueCommitteeMemberController;
 use App\Http\Controllers\Admin\ScreenContentController as AdminScreenContentController;
 use App\Http\Controllers\Admin\ScreenDeviceController as AdminScreenDeviceController;
-use App\Http\Controllers\Admin\BackupController as AdminBackupController;
-use App\Http\Controllers\Admin\ManualController as AdminManualController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Web\AndroidDownloadController;
 use App\Http\Controllers\Web\LandingPageController;
+use App\Http\Controllers\Web\MasjidPortalController;
 use App\Http\Controllers\Web\MasjidRegistrationController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +20,7 @@ Route::get('/android/download', AndroidDownloadController::class)->name('android
 Route::get('/register', [MasjidRegistrationController::class, 'create'])->name('masjids.register');
 Route::post('/register', [MasjidRegistrationController::class, 'store'])->name('masjids.store');
 Route::get('/register/{publicId}/complete', [MasjidRegistrationController::class, 'registered'])->name('masjids.registered');
+Route::get('/masjid/{slug}', MasjidPortalController::class)->name('masjids.portal');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('guest')->group(function () {
@@ -29,9 +32,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'destroy'])->name('logout');
         Route::get('/', AdminDashboardController::class)->name('dashboard');
         Route::get('/manual', AdminManualController::class)->name('manual');
-        Route::resource('masjids', AdminMasjidController::class)->only(['index', 'edit', 'update']);
-        Route::resource('masjids.contents', AdminScreenContentController::class)->except(['show']);
-        Route::middleware('admin')->group(function () {
+        Route::middleware('masjid.owner')->group(function () {
+            Route::resource('masjids', AdminMasjidController::class)->only(['index', 'edit', 'update']);
+            Route::resource('masjids.contents', AdminScreenContentController::class)->except(['show']);
+            Route::resource('masjids.committee-members', AdminMosqueCommitteeMemberController::class)
+                ->except(['show'])
+                ->scoped();
+        });
+        Route::middleware(['admin', 'masjid.owner'])->group(function () {
             Route::get('masjids/{masjid}/devices', [AdminScreenDeviceController::class, 'index'])->name('masjids.devices.index');
             Route::post('masjids/{masjid}/devices/{device}/approve', [AdminScreenDeviceController::class, 'approve'])->name('masjids.devices.approve');
             Route::post('masjids/{masjid}/devices/{device}/reject', [AdminScreenDeviceController::class, 'reject'])->name('masjids.devices.reject');
