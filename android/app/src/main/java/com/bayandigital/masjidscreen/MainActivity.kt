@@ -133,6 +133,7 @@ class MainActivity : ComponentActivity() {
             }
 
             val prayerScreenState = payload?.let { prayerState(it, currentTime) } ?: ScreenState.Idle
+            val nearPrayer = payload?.let { isNearPrayer(it, currentTime) } ?: false
             LaunchedEffect(payload, currentTime) {
                 val currentPayload = payload ?: return@LaunchedEffect
                 if (currentPayload.masjid.prayerAlertsEnabled) {
@@ -149,6 +150,7 @@ class MainActivity : ComponentActivity() {
                     payload = screenPayload,
                     currentTime = currentTime,
                     state = prayerScreenState,
+                    nearPrayer = nearPrayer,
                     connectionStatus = connectionStatus,
                     lastSuccessfulSyncMillis = lastSuccessfulSyncMillis
                 )
@@ -258,6 +260,22 @@ class MainActivity : ComponentActivity() {
             emit("one-minute", iqamah.minusMinutes(1)) { beepSoundManager.oneMinuteRemaining() }
             emit("final-ten", iqamah.minusSeconds(10)) { beepSoundManager.finalTenSecondDoubleBeep() }
             emit("iqamah", iqamah) { beepSoundManager.iqamahAlert() }
+        }
+    }
+
+    private fun isNearPrayer(payload: PrayerResponse, clock: String): Boolean {
+        val date = runCatching { LocalDate.parse(payload.date.gregorian) }.getOrDefault(LocalDate.now())
+        val now = LocalDateTime.of(date, parseClock(clock))
+        val window = payload.masjid.rotationNearPrayerMinutes.coerceAtLeast(0).toLong()
+        val occurrences = prayerOccurrences(payload)
+
+        val inPrayerWindow = occurrences.any { (_, _, azan, iqamah) ->
+            !now.isBefore(azan) && now.isBefore(iqamah.plusMinutes(payload.masjid.silentModeMinutes.toLong()))
+        }
+        if (inPrayerWindow) return true
+
+        return occurrences.any { (_, _, azan, _) ->
+            !now.isBefore(azan.minusMinutes(window)) && now.isBefore(azan)
         }
     }
 

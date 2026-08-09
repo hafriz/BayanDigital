@@ -34,7 +34,12 @@ data class MasjidDto(
     @SerialName("sleep_after_isyak_minutes") val sleepAfterIsyakMinutes: Int = 30,
     @SerialName("screen_wake_mode") val screenWakeMode: String = "fixed",
     @SerialName("screen_wake_time") val screenWakeTime: String = "05:00",
-    @SerialName("wake_before_subuh_minutes") val wakeBeforeSubuhMinutes: Int = 30
+    @SerialName("wake_before_subuh_minutes") val wakeBeforeSubuhMinutes: Int = 30,
+    @SerialName("screen_rotation_enabled") val screenRotationEnabled: Boolean = false,
+    @SerialName("rotation_views") val rotationViews: List<String> = emptyList(),
+    @SerialName("rotation_duration_minutes") val rotationDurationMinutes: Int = 3,
+    @SerialName("rotation_near_prayer_minutes") val rotationNearPrayerMinutes: Int = 30,
+    @SerialName("clock_style") val clockStyle: String = "standard"
 )
 
 @Serializable

@@ -1,5 +1,6 @@
 package com.bayandigital.masjidscreen.ui
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -7,6 +8,11 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -102,13 +108,18 @@ fun SmartScreen(
     payload: PrayerResponse,
     currentTime: String,
     state: ScreenState,
+    nearPrayer: Boolean,
     connectionStatus: ScreenConnectionStatus = ScreenConnectionStatus.Connected,
     lastSuccessfulSyncMillis: Long? = null
 ) {
     val palette = paletteFor(payload.masjid.screenTheme)
     Crossfade(targetState = state, animationSpec = tween(700), label = "screen-state") { screenState ->
         when (screenState) {
-            ScreenState.Idle -> DashboardScreen(payload, currentTime, palette, connectionStatus, lastSuccessfulSyncMillis)
+            ScreenState.Idle -> if (nearPrayer || !payload.masjid.screenRotationEnabled) {
+                DashboardScreen(payload, currentTime, palette, connectionStatus, lastSuccessfulSyncMillis)
+            } else {
+                RotationCarousel(payload, currentTime, palette)
+            }
             is ScreenState.AzanAlert -> FullScreenMessage("AZAN", screenState.prayerName, palette.surface, palette.accent)
             is ScreenState.IqamahCountdown -> FullScreenMessage(
                 "QAMAT ${screenState.prayerName.uppercase()}",
@@ -123,6 +134,60 @@ fun SmartScreen(
                 palette.accent
             )
         }
+    }
+}
+
+private sealed interface RotationView {
+    data object Clock : RotationView
+    data object Announcements : RotationView
+    data object Schedule : RotationView
+    data object Donation : RotationView
+}
+
+@Composable
+private fun RotationCarousel(payload: PrayerResponse, currentTime: String, palette: ScreenPalette) {
+    val views = remember(payload) { buildRotationViews(payload) }
+    if (views.isEmpty()) {
+        DashboardScreen(payload, currentTime, palette, ScreenConnectionStatus.Connected, null)
+        return
+    }
+
+    var index by remember(views) { mutableIntStateOf(0) }
+    val durationMinutes = payload.masjid.rotationDurationMinutes.coerceIn(1, 60)
+    LaunchedEffect(views) {
+        index = 0
+        while (views.size > 1) {
+            delay(durationMinutes * 60_000L)
+            index = (index + 1) % views.size
+        }
+    }
+
+    AnimatedContent(
+        targetState = views[index],
+        transitionSpec = {
+            (slideInHorizontally { it } + fadeIn(tween(600))) togetherWith
+                (slideOutHorizontally { -it } + fadeOut(tween(600)))
+        },
+        label = "rotation-view"
+    ) { view ->
+        when (view) {
+            RotationView.Clock -> FullscreenClock(payload, currentTime, palette)
+            RotationView.Announcements -> FullscreenAnnouncements(payload, palette)
+            RotationView.Schedule -> FullscreenPrayerSchedule(payload, palette)
+            RotationView.Donation -> FullscreenDonation(payload, palette)
+        }
+    }
+}
+
+private fun buildRotationViews(payload: PrayerResponse): List<RotationView> {
+    val wanted = payload.masjid.rotationViews
+    return buildList {
+        if ("clock" in wanted) add(RotationView.Clock)
+        if ("announcements" in wanted && payload.announcements.any { it.type == "announcement" }) add(RotationView.Announcements)
+        if ("schedule" in wanted) add(RotationView.Schedule)
+        if ("donation" in wanted &&
+            (!payload.masjid.donationQrUrl.isNullOrBlank() || !payload.masjid.donationCaption.isNullOrBlank())
+        ) add(RotationView.Donation)
     }
 }
 
@@ -284,7 +349,7 @@ private fun Masthead(payload: PrayerResponse, displayTime: String, palette: Scre
             }
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(displayTime, color = palette.text, fontSize = 46.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(displayTime, color = palette.text, fontSize = if (payload.masjid.clockStyle == "big") 62.sp else 46.sp, fontWeight = FontWeight.Black, maxLines = 1)
             Text(
                 "${payload.masjid.type.uppercase()}  ·  ${payload.masjid.zoneCode}",
                 color = palette.muted,
@@ -759,6 +824,214 @@ private fun paletteFor(theme: String): ScreenPalette = when (theme) {
     "sand" -> ScreenPalette(Color(0xFF1E140C), Color(0xFF452C19), Color(0xFF49301E), Color(0xFF603E22), Color(0xFFF6C85F), Color(0xFFFFDA83), muted = Color(0xFFE5C9A5))
     "royal" -> ScreenPalette(Color(0xFF0D061E), Color(0xFF2B115A), Color(0xFF2E155B), Color(0xFF421F79), Color(0xFFF0C75E), Color(0xFFFFDE7E), muted = Color(0xFFD4C2F0))
     else -> ScreenPalette(Color(0xFF04131F), Color(0xFF0A3B34), Color(0xFF0C3D35), Color(0xFF125347), Color(0xFFFFD166), Color(0xFFFFDE8A), muted = Color(0xFFB8D8D0))
+}
+
+@Composable
+private fun FullscreenClock(payload: PrayerResponse, currentTime: String, palette: ScreenPalette) {
+    val prayers = prayerItems(payload)
+    val nextPrayer = calculateNextPrayer(prayers, currentTime)
+    val displayTime = formatClock(currentTime, payload.masjid.timeFormat)
+    val big = payload.masjid.clockStyle == "big"
+
+    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(palette.background, palette.backgroundEnd)))) {
+        AmbientPattern(palette)
+        Column(
+            Modifier.fillMaxSize().padding(40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                MastheadLogo(payload.masjid.logoUrl, palette)
+                Text(
+                    payload.masjid.name,
+                    color = palette.text,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(Modifier.height(24.dp))
+            Text(
+                displayTime,
+                color = palette.text,
+                fontSize = if (big) 180.sp else 140.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(formatDisplayDate(payload.date.gregorian), color = palette.muted, fontSize = 22.sp, fontWeight = FontWeight.Medium)
+                if (!payload.date.hijri.isNullOrBlank()) {
+                    Box(Modifier.size(5.dp).clip(CircleShape).background(palette.accent))
+                    Text(payload.date.hijri, color = palette.accent, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(Modifier.height(42.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    if (nextPrayer.awaitingIqamah) "MENUNGGU IQAMAH" else "SOLAT SETERUSNYA",
+                    color = palette.muted,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Text(nextPrayer.item.label, color = palette.accent, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                Text(
+                    formatTimer(if (nextPrayer.awaitingIqamah) nextPrayer.iqamahRemainingSeconds ?: 0 else nextPrayer.prayerRemainingSeconds),
+                    color = palette.text,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FullscreenAnnouncements(payload: PrayerResponse, palette: ScreenPalette) {
+    val items = payload.announcements.filter { it.type == "announcement" }
+        .ifEmpty { listOf(welcomeContent(payload.masjid.name)) }
+    var index by remember(items) { mutableIntStateOf(0) }
+    LaunchedEffect(items) {
+        index = 0
+        while (items.size > 1) {
+            delay(15_000)
+            index = (index + 1) % items.size
+        }
+    }
+
+    AnimatedContent(
+        targetState = items[index],
+        transitionSpec = { fadeIn(tween(500)) togetherWith fadeOut(tween(500)) },
+        label = "announcement-rotate"
+    ) { content ->
+        Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(palette.background, palette.backgroundEnd))).padding(48.dp)) {
+            AmbientPattern(palette)
+            Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                ContentBadge(content.type, palette)
+                Spacer(Modifier.height(22.dp))
+                Text(
+                    content.title ?: contentDefaultTitle(content.type),
+                    color = palette.text,
+                    fontSize = 58.sp,
+                    lineHeight = 66.sp,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!content.body.isNullOrBlank()) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        content.body,
+                        color = palette.muted,
+                        fontSize = 28.sp,
+                        lineHeight = 38.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(Modifier.height(30.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    repeat(items.size) { i ->
+                        Box(
+                            Modifier.width(if (i == index) 30.dp else 10.dp).height(10.dp).clip(CircleShape)
+                                .background(if (i == index) palette.accent else palette.muted.copy(alpha = .3f))
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FullscreenPrayerSchedule(payload: PrayerResponse, palette: ScreenPalette) {
+    val prayers = prayerItems(payload)
+    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(palette.background, palette.backgroundEnd))).padding(48.dp)) {
+        AmbientPattern(palette)
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("JADUAL SOLAT", color = palette.accent, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
+            Spacer(Modifier.height(26.dp))
+            Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                prayers.forEach { prayer ->
+                    Column(
+                        Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(28.dp))
+                            .background(palette.surface.copy(alpha = .9f))
+                            .border(1.dp, palette.text.copy(alpha = .08f), RoundedCornerShape(28.dp)),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(prayer.label.uppercase(), color = palette.accent, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                        Spacer(Modifier.height(14.dp))
+                        Text(
+                            formatPrayerTime(prayer.time, payload.masjid.timeFormat),
+                            color = palette.text,
+                            fontSize = 44.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1
+                        )
+                        prayer.iqamahTime?.let {
+                            Spacer(Modifier.height(8.dp))
+                            Text("QAMAT ${it.format(DateTimeFormatter.ofPattern("HH:mm"))}", color = palette.muted, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FullscreenDonation(payload: PrayerResponse, palette: ScreenPalette) {
+    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(palette.background, palette.backgroundEnd))).padding(48.dp)) {
+        AmbientPattern(palette)
+        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(48.dp)) {
+            Box(
+                Modifier.width(400.dp).fillMaxHeight().clip(RoundedCornerShape(28.dp)).background(Color.White).padding(20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (payload.masjid.donationQrUrl.isNullOrBlank()) {
+                    Text(
+                        "QR SUMBANGAN\nBELUM DISEDIAKAN",
+                        color = palette.background,
+                        fontSize = 22.sp,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Black
+                    )
+                } else {
+                    SubcomposeAsyncImage(
+                        model = payload.masjid.donationQrUrl,
+                        contentDescription = "Kod QR sumbangan untuk ${payload.masjid.name}",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit,
+                        loading = { VisualPlaceholder(palette) },
+                        error = { Text("QR TIDAK DAPAT DIMUAT", color = palette.background, textAlign = TextAlign.Center) }
+                    )
+                }
+            }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                ContentBadge("donation", palette)
+                Spacer(Modifier.height(22.dp))
+                Text(
+                    payload.masjid.donationCaption?.takeIf { it.isNotBlank() } ?: "Sumbangan untuk ${payload.masjid.name}",
+                    color = palette.text,
+                    fontSize = 42.sp,
+                    lineHeight = 50.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                payload.masjid.donationAccount?.takeIf { it.isNotBlank() }?.let {
+                    Spacer(Modifier.height(16.dp))
+                    Text(it, color = palette.accent, fontSize = 28.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                }
+            }
+        }
+    }
 }
 
 @Composable

@@ -39,6 +39,11 @@ class MosqueSetting extends Model
         'screen_wake_mode',
         'screen_wake_time',
         'wake_before_subuh_minutes',
+        'screen_rotation_enabled',
+        'rotation_views',
+        'rotation_duration_minutes',
+        'rotation_near_prayer_minutes',
+        'clock_style',
     ];
 
     protected $casts = [
@@ -51,6 +56,10 @@ class MosqueSetting extends Model
         'screen_sleep_enabled' => 'boolean',
         'sleep_after_isyak_minutes' => 'integer',
         'wake_before_subuh_minutes' => 'integer',
+        'screen_rotation_enabled' => 'boolean',
+        'rotation_views' => 'array',
+        'rotation_duration_minutes' => 'integer',
+        'rotation_near_prayer_minutes' => 'integer',
     ];
 
     public function screenContents(): HasMany

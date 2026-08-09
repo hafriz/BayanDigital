@@ -98,11 +98,19 @@ class MasjidController extends Controller
             'screen_wake_mode' => ['required', Rule::in(['fixed', 'before_subuh'])],
             'screen_wake_time' => ['required', 'date_format:H:i'],
             'wake_before_subuh_minutes' => ['required', 'integer', 'min:0', 'max:180'],
+            'screen_rotation_enabled' => ['required', 'boolean'],
+            'rotation_views' => ['nullable', 'array'],
+            'rotation_views.*' => ['string', Rule::in(['clock', 'announcements', 'schedule', 'donation'])],
+            'rotation_duration_minutes' => ['required', 'integer', 'min:1', 'max:60'],
+            'rotation_near_prayer_minutes' => ['required', 'integer', 'min:5', 'max:180'],
+            'clock_style' => ['required', Rule::in(['standard', 'big'])],
         ]);
 
         $validated['public_slug'] = Str::lower($validated['public_slug']);
         $validated['committee'] = collect(preg_split('/\r\n|\r|\n/', $validated['committee'] ?? ''))
             ->map(fn (string $line) => trim($line))->filter()->values()->all();
+        $validated['rotation_views'] = collect($validated['rotation_views'] ?? [])
+            ->map(fn (string $view) => trim($view))->filter()->unique()->values()->all();
 
         $oldLogo = $masjid->logo_url;
         $newLogo = null;

@@ -95,6 +95,13 @@ class MasjidScreenController extends Controller
                 'screen_wake_mode' => $settings->screen_wake_mode ?: 'fixed',
                 'screen_wake_time' => substr((string) $settings->screen_wake_time, 0, 5),
                 'wake_before_subuh_minutes' => (int) ($settings->wake_before_subuh_minutes ?? 30),
+                'screen_rotation_enabled' => (bool) $settings->screen_rotation_enabled,
+                'rotation_views' => is_array($settings->rotation_views)
+                    ? array_values(array_filter($settings->rotation_views))
+                    : ['clock', 'announcements', 'schedule', 'donation'],
+                'rotation_duration_minutes' => (int) ($settings->rotation_duration_minutes ?? 3),
+                'rotation_near_prayer_minutes' => (int) ($settings->rotation_near_prayer_minutes ?? 30),
+                'clock_style' => $settings->clock_style ?: 'standard',
             ],
             'date' => [
                 'gregorian' => $today->prayer_date->toDateString(),
