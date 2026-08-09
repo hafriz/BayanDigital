@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
             val scheduledSleep = payload?.let { DisplayPowerSchedule.isSleeping(it.masjid, it.timeline, currentTime) } ?: false
 
             LaunchedEffect(payload?.masjid, payload?.timeline) {
-                payload?.let { DisplayPowerSchedule.scheduleWake(this@MainActivity, it.masjid, it.timeline) }
+                payload?.let { DisplayPowerSchedule.scheduleBoundaries(this@MainActivity, it.masjid, it.timeline) }
             }
 
             LaunchedEffect(scheduledSleep) {
@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
                     if (payload == null) connectionStatus = ScreenConnectionStatus.Syncing
                     try {
                         val result = repository.sync(store.masjidId!!, store.deviceToken!!)
+                        DisplayPowerSchedule.scheduleBoundaries(this@MainActivity, result.payload.masjid, result.payload.timeline)
                         payload = result.payload
                         lastSuccessfulSyncMillis = result.lastSuccessfulSyncMillis
                         connectionStatus = if (result.isConnected) ScreenConnectionStatus.Connected else ScreenConnectionStatus.Offline
@@ -222,6 +223,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent.getBooleanExtra(DisplayWakeReceiver.EXTRA_SCHEDULED_WAKE, false)) wakeDisplay()
+        if (intent.getBooleanExtra(DisplayWakeReceiver.EXTRA_SCHEDULE_CHANGED, false)) recreate()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
