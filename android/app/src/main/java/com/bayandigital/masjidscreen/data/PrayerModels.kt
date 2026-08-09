@@ -24,7 +24,9 @@ data class MasjidDto(
     @SerialName("time_format") val timeFormat: String = "24h",
     @SerialName("logo_url") val logoUrl: String? = null,
     @SerialName("screen_sleep_enabled") val screenSleepEnabled: Boolean = false,
+    @SerialName("screen_sleep_mode") val screenSleepMode: String = "fixed",
     @SerialName("screen_sleep_time") val screenSleepTime: String = "22:00",
+    @SerialName("sleep_after_isyak_minutes") val sleepAfterIsyakMinutes: Int = 30,
     @SerialName("screen_wake_mode") val screenWakeMode: String = "fixed",
     @SerialName("screen_wake_time") val screenWakeTime: String = "05:00",
     @SerialName("wake_before_subuh_minutes") val wakeBeforeSubuhMinutes: Int = 30

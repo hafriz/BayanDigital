@@ -25,7 +25,9 @@ class MosqueSetting extends Model
         'logo_url',
         'google_calendar_ics_url',
         'screen_sleep_enabled',
+        'screen_sleep_mode',
         'screen_sleep_time',
+        'sleep_after_isyak_minutes',
         'screen_wake_mode',
         'screen_wake_time',
         'wake_before_subuh_minutes',
@@ -36,6 +38,7 @@ class MosqueSetting extends Model
         'iqamah_minutes' => 'array',
         'silent_mode_minutes' => 'integer',
         'screen_sleep_enabled' => 'boolean',
+        'sleep_after_isyak_minutes' => 'integer',
         'wake_before_subuh_minutes' => 'integer',
     ];
 
