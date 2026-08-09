@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MosqueSetting extends Model
 {
     protected $fillable = [
         'public_id',
+        'public_slug',
         'type',
         'name',
         'zone_code',
@@ -17,12 +18,14 @@ class MosqueSetting extends Model
         'contact_phone',
         'contact_email',
         'address',
+        'committee',
         'prayer_offsets',
         'iqamah_minutes',
         'silent_mode_minutes',
         'screen_theme',
         'time_format',
         'logo_url',
+        'donation_qr_url',
         'google_calendar_ics_url',
         'screen_sleep_enabled',
         'screen_sleep_time',
@@ -34,6 +37,7 @@ class MosqueSetting extends Model
     protected $casts = [
         'prayer_offsets' => 'array',
         'iqamah_minutes' => 'array',
+        'committee' => 'array',
         'silent_mode_minutes' => 'integer',
         'screen_sleep_enabled' => 'boolean',
         'wake_before_subuh_minutes' => 'integer',
@@ -47,5 +51,10 @@ class MosqueSetting extends Model
     public function screenDevices(): HasMany
     {
         return $this->hasMany(ScreenDevice::class);
+    }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
     }
 }

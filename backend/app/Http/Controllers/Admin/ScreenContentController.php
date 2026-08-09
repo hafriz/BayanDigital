@@ -16,6 +16,7 @@ class ScreenContentController extends Controller
 
     public function index(Request $request, MosqueSetting $masjid): View
     {
+        $this->authorizeMasjid($request, $masjid);
         $type = in_array($request->query('type'), self::TYPES, true) ? $request->query('type') : null;
 
         return view('admin.contents.index', [
@@ -36,6 +37,7 @@ class ScreenContentController extends Controller
 
     public function create(Request $request, MosqueSetting $masjid): View
     {
+        $this->authorizeMasjid($request, $masjid);
         $content = new ScreenContent;
         $content->type = in_array($request->query('type'), self::TYPES, true) ? $request->query('type') : 'announcement';
 
@@ -44,13 +46,15 @@ class ScreenContentController extends Controller
 
     public function store(Request $request, MosqueSetting $masjid): RedirectResponse
     {
+        $this->authorizeMasjid($request, $masjid);
         $masjid->screenContents()->create($this->validated($request));
 
         return redirect()->route('admin.masjids.contents.index', $masjid)->with('success', 'Screen content created.');
     }
 
-    public function edit(MosqueSetting $masjid, ScreenContent $content): View
+    public function edit(Request $request, MosqueSetting $masjid, ScreenContent $content): View
     {
+        $this->authorizeMasjid($request, $masjid);
         $this->ensureOwnedBy($masjid, $content);
 
         return view('admin.contents.form', compact('masjid', 'content'));
@@ -58,14 +62,16 @@ class ScreenContentController extends Controller
 
     public function update(Request $request, MosqueSetting $masjid, ScreenContent $content): RedirectResponse
     {
+        $this->authorizeMasjid($request, $masjid);
         $this->ensureOwnedBy($masjid, $content);
         $content->update($this->validated($request));
 
         return redirect()->route('admin.masjids.contents.index', $masjid)->with('success', 'Screen content updated.');
     }
 
-    public function destroy(MosqueSetting $masjid, ScreenContent $content): RedirectResponse
+    public function destroy(Request $request, MosqueSetting $masjid, ScreenContent $content): RedirectResponse
     {
+        $this->authorizeMasjid($request, $masjid);
         $this->ensureOwnedBy($masjid, $content);
         $content->delete();
 
@@ -89,5 +95,10 @@ class ScreenContentController extends Controller
     private function ensureOwnedBy(MosqueSetting $masjid, ScreenContent $content): void
     {
         abort_unless($content->mosque_setting_id === $masjid->id, 404);
+    }
+
+    private function authorizeMasjid(Request $request, MosqueSetting $masjid): void
+    {
+        abort_unless($request->user()->isAdmin() || $request->user()->mosque_setting_id === $masjid->id, 403);
     }
 }

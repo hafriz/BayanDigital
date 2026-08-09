@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ $masjid->name }} · BayanDigital</title>
+<style>
+:root{--green:#075d4a;--mint:#e6f7f1;--gold:#d39b2a;--ink:#15332c}*{box-sizing:border-box}body{margin:0;background:#f5f8f6;color:var(--ink);font:16px/1.6 system-ui,sans-serif}header{background:linear-gradient(135deg,#063f35,var(--green));color:white;padding:48px 20px}.wrap{max-width:1050px;margin:auto}.identity{display:flex;align-items:center;gap:22px}.logo{width:100px;height:100px;border-radius:22px;background:white;object-fit:contain;padding:8px}.eyebrow{text-transform:uppercase;letter-spacing:.14em;color:#bcebdd;font-weight:800}.address{max-width:650px;opacity:.86;white-space:pre-line}.grid{display:grid;grid-template-columns:2fr 1fr;gap:24px;padding:28px 20px}.card{background:white;border-radius:18px;padding:24px;box-shadow:0 5px 25px #1232}.card h2{margin-top:0;color:var(--green)}.prayers{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}.prayer{background:var(--mint);padding:14px;text-align:center;border-radius:12px}.prayer strong,.prayer span{display:block}.prayer span{font-size:1.25rem;color:var(--green)}article+article{border-top:1px solid #ddd;margin-top:16px;padding-top:16px}.qr{display:block;width:min(100%,260px);margin:auto}.committee{padding-left:20px}@media(max-width:700px){.grid{grid-template-columns:1fr}.identity{align-items:flex-start}.logo{width:76px;height:76px}h1{font-size:1.8rem}}
+</style></head><body>
+<header><div class="wrap identity">@if($masjid->logo_url)<img class="logo" src="{{ $masjid->logo_url }}" alt="{{ $masjid->name }} logo">@endif<div><div class="eyebrow">{{ ucfirst($masjid->type) }}</div><h1>{{ $masjid->name }}</h1>@if($masjid->address)<div class="address">{{ $masjid->address }}</div>@endif</div></div></header>
+<main class="wrap grid"><div>
+<section class="card"><h2>Today's prayer times</h2><div class="prayers">@foreach($prayerTime->times as $name => $time)<div class="prayer"><strong>{{ ucfirst($name) }}</strong><span>{{ $time }}</span></div>@endforeach</div></section>
+<section class="card" style="margin-top:24px"><h2>Announcements</h2>@forelse($announcements as $announcement)<article><h3>{{ $announcement->title }}</h3><div>{!! nl2br(e($announcement->body)) !!}</div></article>@empty<p>There are no current announcements.</p>@endforelse</section>
+</div><aside>
+<section class="card"><h2>Committee</h2><ul class="committee">@forelse($masjid->committee ?? [] as $member)<li>{{ $member }}</li>@empty<li>{{ $masjid->contact_name ?: 'Committee details coming soon' }}</li>@endforelse</ul></section>
+@if($masjid->donation_qr_url)<section class="card" style="margin-top:24px;text-align:center"><h2>Donations</h2><img class="qr" src="{{ $masjid->donation_qr_url }}" alt="Donation QR code"><p>Scan to support {{ $masjid->name }}.</p></section>@endif
+</aside></main></body></html>
