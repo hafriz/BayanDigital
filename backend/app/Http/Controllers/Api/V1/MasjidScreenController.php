@@ -81,7 +81,7 @@ class MasjidScreenController extends Controller
                 'logo_url' => $this->publicUrl($settings->logo_url),
                 'donation_qr_url' => $settings->donation_qr_image
                     ? $this->publicUrl(Storage::disk('public')->url($settings->donation_qr_image))
-                    : null,
+                    : $this->publicUrl($settings->donation_qr_url),
                 'donation_caption' => $settings->donation_caption,
                 'donation_account' => $settings->donation_account,
                 'screen_sleep_enabled' => (bool) $settings->screen_sleep_enabled,

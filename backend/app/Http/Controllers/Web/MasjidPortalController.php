@@ -10,19 +10,20 @@ use Illuminate\Support\Facades\Storage;
 
 class MasjidPortalController extends Controller
 {
-    public function __invoke(string $publicId, JakimPrayerTimeService $service): View
+    public function __invoke(string $slug, JakimPrayerTimeService $prayerTimes): View
     {
         $masjid = MosqueSetting::query()
-            ->where('public_id', strtoupper($publicId))
+            ->where('public_slug', $slug)
             ->where('status', 'approved')
             ->firstOrFail();
 
-        return view('masjids.show', [
+        return view('masjids.portal', [
             'masjid' => $masjid,
-            'prayerTime' => $service->today($masjid->zone_code, $masjid->prayer_offsets ?? []),
+            'prayerTime' => $prayerTimes->today($masjid->zone_code, $masjid->prayer_offsets ?? []),
+            'announcements' => $masjid->screenContents()->currentlyActive()->where('type', 'announcement')->orderBy('sort_order')->get(),
             'donationQrUrl' => $masjid->donation_qr_image
                 ? Storage::disk('public')->url($masjid->donation_qr_image)
-                : null,
+                : $masjid->donation_qr_url,
         ]);
     }
 }
