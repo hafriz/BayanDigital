@@ -23,8 +23,8 @@ class JakimPrayerTimeService
             ->timeout(20)
             ->acceptJson()
             ->get(rtrim(config('jakim.endpoint'), '/').'/'.strtoupper($zoneCode), [
-                'month' => $start->format('m'),
-                'year' => $start->format('Y'),
+                'month' => (int) $start->format('m'),
+                'year' => (int) $start->format('Y'),
             ])
             ->throw()
             ->json();

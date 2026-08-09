@@ -79,7 +79,7 @@ class ScreenPairingController extends Controller
             return response()->json(['message' => 'Pairing request not found.'], 404);
         }
 
-        if ($device->expires_at->isPast() && in_array($device->status, ['pending', 'approved'], true)) {
+        if ($device->status === 'pending' && $device->expires_at->isPast()) {
             $device->update(['status' => 'expired']);
         }
 

@@ -84,6 +84,9 @@ RUN composer install --no-dev --no-scripts --prefer-dist --no-interaction 2>/dev
 # Copy application source
 COPY backend/ .
 
+# Ship the Android TV APK (built by CI; required for the download page)
+COPY backend/public/android/ /var/www/html/public/android/
+
 RUN composer dump-autoload --optimize \
     && mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
