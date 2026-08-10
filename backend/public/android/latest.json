@@ -1,6 +1,6 @@
 {
-  "version_name": "0.11.0",
-  "version_code": 14,
-  "apk_url": "/android/masjid-smart-screen-tv.apk?v=14",
-  "release_notes": "Fullscreen view rotation is now configurable in seconds, with new Maklumat (slide) and Galeri (image) views."
+  "version_name": "0.11.1",
+  "version_code": 15,
+  "apk_url": "/android/masjid-smart-screen-tv.apk?v=15",
+  "release_notes": "Iqamah times now follow the selected 12h/24h time format on the dashboard and fullscreen views."
 }

@@ -269,7 +269,7 @@ private fun DashboardScreen(
             Spacer(Modifier.height(16.dp))
 
             Row(Modifier.fillMaxWidth().height(184.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                NextPrayerHero(nextPrayer, palette, Modifier.weight(1.08f).fillMaxHeight())
+                NextPrayerHero(nextPrayer, payload.masjid.timeFormat, palette, Modifier.weight(1.08f).fillMaxHeight())
                 PrayerTimeline(
                     prayers = prayers,
                     nextPrayer = nextPrayer,
@@ -421,7 +421,7 @@ private fun DefaultBayanDigitalLogo(palette: ScreenPalette) {
 }
 
 @Composable
-private fun NextPrayerHero(nextPrayer: NextPrayer, palette: ScreenPalette, modifier: Modifier) {
+private fun NextPrayerHero(nextPrayer: NextPrayer, timeFormat: String, palette: ScreenPalette, modifier: Modifier) {
     val infinite = rememberInfiniteTransition(label = "next-prayer-pulse")
     val pulse by infinite.animateFloat(
         initialValue = .96f,
@@ -458,9 +458,9 @@ private fun NextPrayerHero(nextPrayer: NextPrayer, palette: ScreenPalette, modif
             }
             nextPrayer.item.iqamahDelayMinutes?.let { delay ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("AZAN ${formatPrayerTime(nextPrayer.item.time, "24h")}", color = palette.background.copy(alpha = .78f), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("AZAN ${formatPrayerTime(nextPrayer.item.time, timeFormat)}", color = palette.background.copy(alpha = .78f), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "QAMAT +$delay MIN · ${nextPrayer.item.iqamahTime?.format(DateTimeFormatter.ofPattern("HH:mm")) ?: "--:--"} · ${formatTimer(nextPrayer.iqamahRemainingSeconds ?: 0)}",
+                        "QAMAT +$delay MIN · ${formatTimeOfDay(nextPrayer.item.iqamahTime, timeFormat)} · ${formatTimer(nextPrayer.iqamahRemainingSeconds ?: 0)}",
                         color = palette.background.copy(alpha = .78f),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
@@ -815,6 +815,9 @@ private fun formatPrayerTime(value: String, format: String): String {
     return time.format(DateTimeFormatter.ofPattern(if (format == "12h") "h:mm a" else "HH:mm"))
 }
 
+private fun formatTimeOfDay(time: LocalTime?, format: String): String =
+    time?.format(DateTimeFormatter.ofPattern(if (format == "12h") "h:mm a" else "HH:mm")) ?: "--:--"
+
 private fun formatDisplayDate(value: String): String = runCatching {
     LocalDate.parse(value).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))
 }.getOrDefault(value)
@@ -1010,7 +1013,7 @@ private fun FullscreenPrayerSchedule(payload: PrayerResponse, palette: ScreenPal
                         )
                         prayer.iqamahTime?.let {
                             Spacer(Modifier.height(8.dp))
-                            Text("QAMAT ${it.format(DateTimeFormatter.ofPattern("HH:mm"))}", color = palette.muted, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("QAMAT ${formatTimeOfDay(it, payload.masjid.timeFormat)}", color = palette.muted, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
