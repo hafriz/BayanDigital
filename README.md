@@ -87,6 +87,13 @@ only when that email does not already exist, so later deployments do not reset
 an administrator's password. Change the temporary password from the Users page
 after signing in.
 
+Registration notifications use Resend. Set `MAIL_MAILER=resend`,
+`RESEND_API_KEY`, and a `MAIL_FROM_ADDRESS` on a domain verified by Resend in
+the deployment environment. New masjid or surau requests are sent to
+`ADMIN_EMAIL`; when an administrator approves one, the registered contact email
+receives an approval notification. Email delivery failures are logged and do
+not prevent registrations or approvals from completing.
+
 ## User Manual
 
 A comprehensive user manual is available inside the admin panel at **/admin/manual**.

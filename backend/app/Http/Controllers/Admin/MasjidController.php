@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MosqueSetting;
 use App\Models\User;
 use App\Services\LogoUrlResolver;
+use App\Services\MasjidEmailNotificationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -47,8 +48,12 @@ class MasjidController extends Controller
         ]);
     }
 
-    public function update(Request $request, MosqueSetting $masjid, LogoUrlResolver $logos): RedirectResponse
-    {
+    public function update(
+        Request $request,
+        MosqueSetting $masjid,
+        LogoUrlResolver $logos,
+        MasjidEmailNotificationService $notifications,
+    ): RedirectResponse {
         $this->authorizeMasjid($request, $masjid);
         $wasApproved = $masjid->status === 'approved';
         $zoneCodes = collect(config('jakim.zones', []))->flatMap(fn (array $zones) => array_keys($zones))->all();
@@ -171,6 +176,8 @@ class MasjidController extends Controller
                     ? ' An operator invitation account was created for '.$operator->email.'.'
                     : ' The existing operator was assigned to this masjid.';
             }
+
+            $notifications->registrationApproved($masjid);
         }
 
         return redirect()->route('admin.masjids.index')->with('success', $message);
