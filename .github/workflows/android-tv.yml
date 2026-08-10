@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - 'android/**'
+      - 'backend/**'
+      - 'docker/**'
+      - 'docker-compose.yml'
       - '.github/workflows/android-tv.yml'
       - 'ci/update-android-metadata.sh'
   pull_request:
@@ -98,3 +101,71 @@ jobs:
               --notes 'Automatically built Android TV release.' \
               --latest=false --repo "${GITHUB_REPOSITORY}"
           fi
+
+  deploy-server:
+    name: Deploy to server
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-apk
+    runs-on: [self-hosted, ARM64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Download built APK
+        uses: actions/download-artifact@v4
+        with:
+          name: masjid-smart-screen-tv-release
+          path: build/android-apk
+
+      - name: Update server repository to this commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C /home/hafriz/BayanDigital fetch origin main
+          git -C /home/hafriz/BayanDigital reset --hard origin/main
+
+      - name: Install signed APK into the web application
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -D -m 0644 \
+            "${GITHUB_WORKSPACE}/build/android-apk/app-release.apk" \
+            /home/hafriz/BayanDigital/backend/public/android/masjid-smart-screen-tv.apk
+          test -s /home/hafriz/BayanDigital/backend/public/android/masjid-smart-screen-tv.apk
+
+      - name: Synchronize Android release metadata
+        shell: bash
+        run: bash ci/update-android-metadata.sh
+        working-directory: /home/hafriz/BayanDigital
+
+      - name: Rebuild and redeploy application container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose build app
+          docker compose up -d app
+        working-directory: /home/hafriz/BayanDigital
+
+      - name: Wait for application health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            status="$(docker inspect -f '{{.State.Health.Status}}' bayandigital-app-1 2>/dev/null || true)"
+            echo "[$i] health=$status"
+            [ "$status" = "healthy" ] && exit 0
+            sleep 5
+          done
+          echo "Application did not become healthy in time" >&2
+          exit 1
+
+      - name: Verify served APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(md5sum /home/hafriz/BayanDigital/backend/public/android/masjid-smart-screen-tv.apk | cut -d' ' -f1)"
+          served="$(curl -fsS "http://localhost:7575/android/masjid-smart-screen-tv.apk" | md5sum | cut -d' ' -f1)"
+          echo "expected=$expected served=$served"
+          [ "$expected" = "$served" ]
