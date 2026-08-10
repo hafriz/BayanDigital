@@ -1,6 +1,6 @@
 {
-  "version_name": "0.12.2",
-  "version_code": 18,
-  "apk_url": "/android/masjid-smart-screen-tv.apk?v=18",
-  "release_notes": "All Maklumat/Pengumuman items now rotate fully, Jadual Solat shows the zone, and day/month follow the mosque language."
+  "version_name": "0.12.3",
+  "version_code": 19,
+  "apk_url": "/android/masjid-smart-screen-tv.apk?v=19",
+  "release_notes": "Added an info button on the main screen that shows the app version and lets you check for and install updates."
 }

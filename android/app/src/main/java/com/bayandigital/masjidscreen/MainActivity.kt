@@ -83,8 +83,10 @@ class MainActivity : ComponentActivity() {
     private lateinit var enableInstallLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
     private var updateInfo by mutableStateOf<AndroidUpdate?>(null)
     private var isUpdating by mutableStateOf(false)
+    private var isCheckingUpdate by mutableStateOf(false)
     private var updateNotice by mutableStateOf<String?>(null)
     private var needsInstallPermission by mutableStateOf(false)
+    private var showUpdateInfoDialog by mutableStateOf(false)
     private var pendingApkFile: File? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -134,6 +136,7 @@ class MainActivity : ComponentActivity() {
                                     System.currentTimeMillis() >= snoozedUntil
                                 ) {
                                     updateInfo = latest
+                                    showUpdateInfoDialog = true
                                 }
                             }
                         }
@@ -197,7 +200,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val showUpdateDialog = updateInfo != null || isUpdating || needsInstallPermission || updateNotice != null
             Box(Modifier.fillMaxSize()) {
                 if (scheduledSleep) {
                     BackHandler { }
@@ -210,7 +212,8 @@ class MainActivity : ComponentActivity() {
                         state = prayerScreenState,
                         nearPrayer = nearPrayer,
                         connectionStatus = connectionStatus,
-                        lastSuccessfulSyncMillis = lastSuccessfulSyncMillis
+                        lastSuccessfulSyncMillis = lastSuccessfulSyncMillis,
+                        onInfoClick = { showUpdateInfoDialog = true }
                     )
                 } ?: pairing?.let { pairingRequest ->
                     PairingScreen(
@@ -277,49 +280,60 @@ class MainActivity : ComponentActivity() {
                     }
                 )
 
-                if (showUpdateDialog) {
+                if (showUpdateInfoDialog) {
                     AlertDialog(
-                        onDismissRequest = { if (!isUpdating) snoozeUpdate() },
-                        title = { Text("Kemas kini aplikasi", fontWeight = FontWeight.Black) },
+                        onDismissRequest = { if (!isUpdating && !isCheckingUpdate) dismissUpdateDialog() },
+                        title = { Text("Maklumat aplikasi", fontWeight = FontWeight.Black) },
                         text = {
-                            when {
-                                isUpdating -> Column(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    CircularProgressIndicator(Modifier.size(40.dp))
-                                    Spacer(Modifier.height(12.dp))
-                                    Text("Memuat turun versi baru…", textAlign = TextAlign.Center)
-                                }
-                                needsInstallPermission -> Text(
-                                    "Sila benarkan 'Sumber tidak diketahui' untuk aplikasi ini supaya TV boleh memasang kemas kini automatik.",
-                                    textAlign = TextAlign.Center
+                            Column(Modifier.fillMaxWidth()) {
+                                Text(
+                                    "Versi semasa: v${BuildConfig.VERSION_NAME}",
+                                    fontWeight = FontWeight.Bold
                                 )
-                                updateInfo != null -> Column(Modifier.fillMaxWidth()) {
-                                    Text("Versi v${updateInfo!!.versionName} tersedia.", fontWeight = FontWeight.Bold)
-                                    if (!updateInfo!!.releaseNotes.isNullOrBlank()) {
-                                        Spacer(Modifier.height(8.dp))
-                                        Text(updateInfo!!.releaseNotes!!, color = Color.Gray)
+                                Spacer(Modifier.height(10.dp))
+                                when {
+                                    isUpdating -> Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        CircularProgressIndicator(Modifier.size(40.dp))
+                                        Spacer(Modifier.height(12.dp))
+                                        Text("Memuat turun versi baru…", textAlign = TextAlign.Center)
                                     }
-                                    Spacer(Modifier.height(12.dp))
-                                    Text("Muat turun dan pasang sekarang?")
+                                    isCheckingUpdate -> Text(
+                                        "Menyemak kemas kini…",
+                                        textAlign = TextAlign.Center
+                                    )
+                                    needsInstallPermission -> Text(
+                                        "Sila benarkan 'Sumber tidak diketahui' untuk aplikasi ini supaya TV boleh memasang kemas kini.",
+                                        textAlign = TextAlign.Center
+                                    )
+                                    updateInfo != null -> Column(Modifier.fillMaxWidth()) {
+                                        Text("Versi terkini: v${updateInfo!!.versionName}", color = Color(0xFF0B7A45), fontWeight = FontWeight.Bold)
+                                        if (!updateInfo!!.releaseNotes.isNullOrBlank()) {
+                                            Spacer(Modifier.height(8.dp))
+                                            Text(updateInfo!!.releaseNotes!!, color = Color.Gray)
+                                        }
+                                        Spacer(Modifier.height(12.dp))
+                                        Text("Kemas kini tersedia. Muat turun dan pasang sekarang?")
+                                    }
+                                    else -> Text(updateNotice ?: "Tiada kemas kini baru.", textAlign = TextAlign.Center)
                                 }
-                                else -> Text(updateNotice ?: "", textAlign = TextAlign.Center)
                             }
                         },
                         confirmButton = {
                             when {
-                                isUpdating -> {}
+                                isUpdating || isCheckingUpdate -> {}
                                 needsInstallPermission -> TextButton(onClick = { openInstallPermissionSettings() }) { Text("Buka tetapan") }
                                 updateInfo != null -> Button(onClick = { startUpdate(scope, updater, updateInfo!!) }) { Text("Kemaskini") }
-                                else -> TextButton(onClick = { snoozeUpdate() }) { Text("Tutup") }
+                                else -> TextButton(onClick = { checkForUpdate(scope, updater) }) { Text("Semak kemas kini") }
                             }
                         },
                         dismissButton = {
                             when {
-                                isUpdating -> {}
+                                isUpdating || isCheckingUpdate -> {}
                                 needsInstallPermission || updateInfo != null -> TextButton(onClick = { snoozeUpdate() }) { Text("Nanti") }
-                                else -> {}
+                                else -> TextButton(onClick = { dismissUpdateDialog() }) { Text("Tutup") }
                             }
                         }
                     )
@@ -519,12 +533,36 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun checkForUpdate(scope: kotlinx.coroutines.CoroutineScope, updater: AppUpdater) {
+        scope.launch {
+            isCheckingUpdate = true
+            updateNotice = null
+            val latest = updater.fetchLatest()
+            isCheckingUpdate = false
+            if (latest != null && latest.versionCode > BuildConfig.VERSION_CODE) {
+                updateInfo = latest
+            } else {
+                updateInfo = null
+                updateNotice = "Anda sudah menggunakan versi terkini v${BuildConfig.VERSION_NAME}."
+            }
+        }
+    }
+
     private fun snoozeUpdate() {
         preferences.edit().putLong(KEY_SNOOZE_UNTIL, System.currentTimeMillis() + SNOOZE_MILLIS).apply()
         updateInfo = null
         updateNotice = null
         needsInstallPermission = false
         pendingApkFile = null
+        showUpdateInfoDialog = false
+    }
+
+    private fun dismissUpdateDialog() {
+        updateInfo = null
+        updateNotice = null
+        needsInstallPermission = false
+        pendingApkFile = null
+        showUpdateInfoDialog = false
     }
 
     private fun friendlyConnectionError(error: Throwable): String = when {

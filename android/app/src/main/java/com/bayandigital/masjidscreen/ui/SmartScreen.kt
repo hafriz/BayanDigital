@@ -18,6 +18,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -111,7 +112,8 @@ fun SmartScreen(
     state: ScreenState,
     nearPrayer: Boolean,
     connectionStatus: ScreenConnectionStatus = ScreenConnectionStatus.Connected,
-    lastSuccessfulSyncMillis: Long? = null
+    lastSuccessfulSyncMillis: Long? = null,
+    onInfoClick: () -> Unit = {}
 ) {
     val palette = paletteFor(payload.masjid.screenTheme)
     val globalNotice = payload.announcements.firstOrNull { it.type == "global_notice" }
@@ -120,8 +122,8 @@ fun SmartScreen(
             ScreenState.Idle -> when {
                 globalNotice != null -> GlobalNoticeScreen(globalNotice, payload.masjid.name, palette)
                 nearPrayer || !payload.masjid.screenRotationEnabled ->
-                    DashboardScreen(payload, currentTime, palette, connectionStatus, lastSuccessfulSyncMillis)
-                else -> RotationCarousel(payload, currentTime, palette)
+                    DashboardScreen(payload, currentTime, palette, connectionStatus, lastSuccessfulSyncMillis, onInfoClick)
+                else -> RotationCarousel(payload, currentTime, palette, onInfoClick)
             }
             is ScreenState.AzanAlert -> FullScreenMessage("AZAN", screenState.prayerName, palette.surface, palette.accent)
             is ScreenState.IqamahCountdown -> FullScreenMessage(
@@ -171,7 +173,12 @@ private sealed interface RotationView {
 }
 
 @Composable
-private fun RotationCarousel(payload: PrayerResponse, currentTime: String, palette: ScreenPalette) {
+private fun RotationCarousel(
+    payload: PrayerResponse,
+    currentTime: String,
+    palette: ScreenPalette,
+    onInfoClick: () -> Unit = {}
+) {
     val views = remember(payload) { buildRotationViews(payload) }
     if (views.isEmpty()) {
         DashboardScreen(payload, currentTime, palette, ScreenConnectionStatus.Connected, null)
@@ -201,7 +208,7 @@ private fun RotationCarousel(payload: PrayerResponse, currentTime: String, palet
         label = "rotation-view"
     ) { view ->
         when (view) {
-            RotationView.Main -> DashboardScreen(payload, currentTime, palette, ScreenConnectionStatus.Connected, null)
+            RotationView.Main -> DashboardScreen(payload, currentTime, palette, ScreenConnectionStatus.Connected, null, onInfoClick)
             RotationView.Clock -> FullscreenClock(payload, currentTime, palette)
             is RotationView.Content -> FullscreenContent(view.item, palette)
             RotationView.Schedule -> FullscreenPrayerSchedule(payload, palette)
@@ -239,7 +246,8 @@ private fun DashboardScreen(
     currentTime: String,
     palette: ScreenPalette,
     connectionStatus: ScreenConnectionStatus,
-    lastSuccessfulSyncMillis: Long?
+    lastSuccessfulSyncMillis: Long?,
+    onInfoClick: () -> Unit = {}
 ) {
     val prayers = prayerItems(payload)
     val nextPrayer = calculateNextPrayer(prayers, currentTime)
@@ -275,7 +283,7 @@ private fun DashboardScreen(
     ) {
         AmbientPattern(palette)
         Column(Modifier.fillMaxSize().padding(start = 28.dp, top = 22.dp, end = 28.dp, bottom = 22.dp)) {
-            Masthead(payload, displayTime, palette)
+            Masthead(payload, displayTime, palette, onInfoClick)
             Spacer(Modifier.height(16.dp))
 
             Row(Modifier.fillMaxWidth().height(184.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -370,7 +378,7 @@ private fun ConnectionIndicator(
 }
 
 @Composable
-private fun Masthead(payload: PrayerResponse, displayTime: String, palette: ScreenPalette) {
+private fun Masthead(payload: PrayerResponse, displayTime: String, palette: ScreenPalette, onInfoClick: () -> Unit = {}) {
     Row(Modifier.fillMaxWidth().height(110.dp), verticalAlignment = Alignment.CenterVertically) {
         MastheadLogo(payload.masjid.logoUrl, palette)
         Box(Modifier.width(1.dp).height(42.dp).background(palette.text.copy(alpha = .14f)))
@@ -397,6 +405,14 @@ private fun Masthead(payload: PrayerResponse, displayTime: String, palette: Scre
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
             )
+        }
+        Box(
+            Modifier.padding(start = 14.dp).size(34.dp).clip(CircleShape)
+                .background(palette.accent.copy(alpha = .16f))
+                .clickable(onClick = onInfoClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("i", color = palette.accent, fontSize = 16.sp, fontWeight = FontWeight.Black)
         }
     }
 }
