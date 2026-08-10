@@ -80,6 +80,7 @@ class MasjidScreenController extends Controller
                 'iqamah_minutes' => $settings->iqamah_minutes ?? [],
                 'prayer_alerts_enabled' => (bool) $settings->prayer_alerts_enabled,
                 'pre_prayer_beep_minutes' => (int) $settings->pre_prayer_beep_minutes,
+                'countdown_beep_seconds' => (int) ($settings->countdown_beep_seconds ?? 10),
                 'silent_mode_minutes' => $settings->silent_mode_minutes,
                 'screen_theme' => $settings->screen_theme ?: 'emerald',
                 'time_format' => $settings->time_format ?: '24h',

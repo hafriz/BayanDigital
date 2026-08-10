@@ -70,6 +70,7 @@ class MasjidController extends Controller
             'silent_mode_minutes' => ['required', 'integer', 'min:0', 'max:120'],
             'prayer_alerts_enabled' => ['required', 'boolean'],
             'pre_prayer_beep_minutes' => ['required', 'integer', 'min:0', 'max:60'],
+            'countdown_beep_seconds' => ['required', 'integer', 'min:0', 'max:60'],
             'iqamah_minutes' => ['required', 'array:subuh,zohor,asar,maghrib,isyak'],
             'iqamah_minutes.subuh' => ['required', 'integer', 'min:0', 'max:120'],
             'iqamah_minutes.zohor' => ['required', 'integer', 'min:0', 'max:120'],

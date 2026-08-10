@@ -365,6 +365,7 @@ class MainActivity : ComponentActivity() {
         preferences: android.content.SharedPreferences
     ) {
         val now = LocalDateTime.of(runCatching { LocalDate.parse(payload.date.gregorian) }.getOrDefault(LocalDate.now()), parseClock(clock))
+        val countdownSeconds = payload.masjid.countdownBeepSeconds.coerceAtLeast(0).toLong()
         prayerOccurrences(payload).forEach { (key, _, azan, iqamah) ->
             val occurrence = "${now.toLocalDate()}-$key"
             fun emit(event: String, target: LocalDateTime, sound: () -> Unit) {
@@ -375,12 +376,25 @@ class MainActivity : ComponentActivity() {
                     preferences.edit().putBoolean(eventKey, true).apply()
                 }
             }
+            fun emitCountdown(event: String, target: LocalDateTime, sound: () -> Unit) {
+                if (countdownSeconds <= 0) return
+                val remaining = Duration.between(now, target).seconds
+                if (remaining in 1..countdownSeconds) {
+                    val eventKey = "prayer_alert:$occurrence:$event:$remaining"
+                    if (!preferences.getBoolean(eventKey, false)) {
+                        sound()
+                        preferences.edit().putBoolean(eventKey, true).apply()
+                    }
+                }
+            }
             emit("pre", azan.minusMinutes(payload.masjid.prePrayerBeepMinutes.toLong())) { beepSoundManager.prePrayerAlert() }
             emit("azan", azan) { beepSoundManager.azanAlert() }
             emit("countdown", azan.plusSeconds(AZAN_ALERT_SECONDS)) { beepSoundManager.countdownStarted() }
             emit("one-minute", iqamah.minusMinutes(1)) { beepSoundManager.oneMinuteRemaining() }
             emit("final-ten", iqamah.minusSeconds(10)) { beepSoundManager.finalTenSecondDoubleBeep() }
             emit("iqamah", iqamah) { beepSoundManager.iqamahAlert() }
+            emitCountdown("azan_countdown", azan) { beepSoundManager.countdownBeep() }
+            emitCountdown("iqamah_countdown", iqamah) { beepSoundManager.countdownBeep() }
         }
     }
 

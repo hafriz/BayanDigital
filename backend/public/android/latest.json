@@ -1,6 +1,6 @@
 {
-  "version_name": "0.12.3",
-  "version_code": 19,
-  "apk_url": "/android/masjid-smart-screen-tv.apk?v=19",
-  "release_notes": "Added an info button on the main screen that shows the app version and lets you check for and install updates."
+  "version_name": "0.12.4",
+  "version_code": 20,
+  "apk_url": "/android/masjid-smart-screen-tv.apk?v=20",
+  "release_notes": "Added configurable repeating countdown beeps before azan and qamat."
 }

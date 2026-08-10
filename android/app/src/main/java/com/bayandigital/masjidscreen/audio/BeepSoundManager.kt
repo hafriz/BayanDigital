@@ -11,6 +11,7 @@ class BeepSoundManager {
     fun iqamahAlert() = tone.startTone(ToneGenerator.TONE_CDMA_ALERT_AUTOREDIAL_LITE, 500)
     fun countdownStarted() = tone.startTone(ToneGenerator.TONE_PROP_BEEP, 250)
     fun oneMinuteRemaining() = tone.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 350)
+    fun countdownBeep() = tone.startTone(ToneGenerator.TONE_PROP_BEEP, 100)
 
     fun finalTenSecondDoubleBeep() {
         tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 120)
