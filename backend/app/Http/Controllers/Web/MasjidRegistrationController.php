@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\MosqueSetting;
 use App\Services\DefaultScreenContentService;
+use App\Services\MasjidEmailNotificationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,8 +21,11 @@ class MasjidRegistrationController extends Controller
         ]);
     }
 
-    public function store(Request $request, DefaultScreenContentService $defaultContent): RedirectResponse
-    {
+    public function store(
+        Request $request,
+        DefaultScreenContentService $defaultContent,
+        MasjidEmailNotificationService $notifications,
+    ): RedirectResponse {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
             'type' => ['required', Rule::in(['masjid', 'surau'])],
@@ -49,6 +53,7 @@ class MasjidRegistrationController extends Controller
         ]);
 
         $defaultContent->seed($masjid);
+        $notifications->registrationRequested($masjid);
 
         return redirect()->route('masjids.registered', $masjid->public_id);
     }

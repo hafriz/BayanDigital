@@ -17,3 +17,6 @@ data:
   CACHE_DRIVER: "redis"
   QUEUE_CONNECTION: "redis"
   SESSION_DRIVER: "redis"
+  MAIL_MAILER: "resend"
+  MAIL_FROM_ADDRESS: "notifications@rarecreation.xyz"
+  MAIL_FROM_NAME: "Masjid Smart Screen"
