@@ -66,6 +66,14 @@ data class AnnouncementDto(
 )
 
 @Serializable
+data class AndroidUpdate(
+    @SerialName("version_name") val versionName: String,
+    @SerialName("version_code") val versionCode: Int,
+    @SerialName("apk_url") val apkUrl: String,
+    @SerialName("release_notes") val releaseNotes: String? = null
+)
+
+@Serializable
 data class MasjidSearchResponse(val results: List<MasjidSearchResult>)
 
 @Serializable

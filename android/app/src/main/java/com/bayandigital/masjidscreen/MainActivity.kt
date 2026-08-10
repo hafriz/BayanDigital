@@ -3,16 +3,33 @@ package com.bayandigital.masjidscreen
 import android.os.Build
 import android.os.Bundle
 import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -20,8 +37,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.bayandigital.masjidscreen.data.AndroidUpdate
 import com.bayandigital.masjidscreen.data.MasjidSearchResult
 import com.bayandigital.masjidscreen.data.PairingRequestBody
 import com.bayandigital.masjidscreen.data.PairingRequestResponse
@@ -36,7 +59,9 @@ import com.bayandigital.masjidscreen.setup.SetupScreen
 import com.bayandigital.masjidscreen.ui.ScreenState
 import com.bayandigital.masjidscreen.ui.ScreenConnectionStatus
 import com.bayandigital.masjidscreen.ui.SmartScreen
+import com.bayandigital.masjidscreen.update.AppUpdater
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import java.io.File
 import java.io.IOException
 import java.time.LocalTime
 import java.time.LocalDate
@@ -54,6 +79,13 @@ import retrofit2.Retrofit
 
 class MainActivity : ComponentActivity() {
     private lateinit var beepSoundManager: BeepSoundManager
+    private lateinit var preferences: android.content.SharedPreferences
+    private lateinit var enableInstallLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
+    private var updateInfo by mutableStateOf<AndroidUpdate?>(null)
+    private var isUpdating by mutableStateOf(false)
+    private var updateNotice by mutableStateOf<String?>(null)
+    private var needsInstallPermission by mutableStateOf(false)
+    private var pendingApkFile: File? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,6 +93,7 @@ class MainActivity : ComponentActivity() {
 
         val preferences = getSharedPreferences("screen_setup", MODE_PRIVATE)
         beepSoundManager = BeepSoundManager()
+        this.preferences = preferences
         val store = MasjidSetupStore(preferences)
         val json = Json { ignoreUnknownKeys = true }
         val api = Retrofit.Builder()
@@ -70,6 +103,11 @@ class MainActivity : ComponentActivity() {
             .build()
             .create(PrayerApi::class.java)
         val repository = PrayerRepository(api, preferences, json)
+        val updater = AppUpdater(API_BASE_URL)
+        enableInstallLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            needsInstallPermission = false
+            pendingApkFile?.let { file -> installApk(file) }
+        }
 
         setContent {
             val scope = rememberCoroutineScope()
@@ -85,6 +123,24 @@ class MainActivity : ComponentActivity() {
             var connectionStatus by remember { mutableStateOf(ScreenConnectionStatus.Syncing) }
             var lastSuccessfulSyncMillis by remember { mutableStateOf<Long?>(null) }
             val scheduledSleep = payload?.let { DisplayPowerSchedule.isSleeping(it.masjid, it.timeline, currentTime) } ?: false
+
+            LaunchedEffect(Unit) {
+                while (true) {
+                    runCatching {
+                        if (store.isConfigured && updateInfo == null && !isUpdating) {
+                            updater.fetchLatest()?.let { latest ->
+                                val snoozedUntil = preferences.getLong(KEY_SNOOZE_UNTIL, 0L)
+                                if (latest.versionCode > BuildConfig.VERSION_CODE &&
+                                    System.currentTimeMillis() >= snoozedUntil
+                                ) {
+                                    updateInfo = latest
+                                }
+                            }
+                        }
+                    }
+                    delay(UPDATE_CHECK_MILLIS)
+                }
+            }
 
             LaunchedEffect(payload?.masjid, payload?.timeline) {
                 payload?.let { DisplayPowerSchedule.scheduleBoundaries(this@MainActivity, it.masjid, it.timeline) }
@@ -141,83 +197,134 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            if (scheduledSleep) {
-                BackHandler { }
-                Box(Modifier.fillMaxSize().background(Color.Black))
-            } else payload?.let { screenPayload ->
-                BackHandler { payload = null }
-                SmartScreen(
-                    payload = screenPayload,
-                    currentTime = currentTime,
-                    state = prayerScreenState,
-                    nearPrayer = nearPrayer,
-                    connectionStatus = connectionStatus,
-                    lastSuccessfulSyncMillis = lastSuccessfulSyncMillis
-                )
-            } ?: pairing?.let { pairingRequest ->
-                PairingScreen(
-                    appVersion = BuildConfig.VERSION_NAME,
-                    pairing = pairingRequest,
-                    isChecking = isChecking,
-                    message = pairingMessage,
-                    onCheck = {
-                        scope.launch {
-                            isChecking = true
-                            pairingMessage = null
-                            runCatching { api.pairingStatus(pairingRequest.requestId, pairingRequest.pairingCode) }
-                                .onSuccess { status ->
-                                    if (status.status == "approved") {
-                                        completePairing(status, store)
-                                        pairing = null
-                                        connectVersion += 1
-                                    } else {
-                                        pairingMessage = status.message ?: "Waiting for administrator approval."
+            val showUpdateDialog = updateInfo != null || isUpdating || needsInstallPermission || updateNotice != null
+            Box(Modifier.fillMaxSize()) {
+                if (scheduledSleep) {
+                    BackHandler { }
+                    Box(Modifier.fillMaxSize().background(Color.Black))
+                } else payload?.let { screenPayload ->
+                    BackHandler { payload = null }
+                    SmartScreen(
+                        payload = screenPayload,
+                        currentTime = currentTime,
+                        state = prayerScreenState,
+                        nearPrayer = nearPrayer,
+                        connectionStatus = connectionStatus,
+                        lastSuccessfulSyncMillis = lastSuccessfulSyncMillis
+                    )
+                } ?: pairing?.let { pairingRequest ->
+                    PairingScreen(
+                        appVersion = BuildConfig.VERSION_NAME,
+                        pairing = pairingRequest,
+                        isChecking = isChecking,
+                        message = pairingMessage,
+                        onCheck = {
+                            scope.launch {
+                                isChecking = true
+                                pairingMessage = null
+                                runCatching { api.pairingStatus(pairingRequest.requestId, pairingRequest.pairingCode) }
+                                    .onSuccess { status ->
+                                        if (status.status == "approved") {
+                                            completePairing(status, store)
+                                            pairing = null
+                                            connectVersion += 1
+                                        } else {
+                                            pairingMessage = status.message ?: "Waiting for administrator approval."
+                                        }
                                     }
+                                    .onFailure { pairingMessage = friendlyConnectionError(it) }
+                                isChecking = false
+                            }
+                        },
+                        onCancel = {
+                            pairing = null
+                            pairingMessage = null
+                        }
+                    )
+                } ?: SetupScreen(
+                    appVersion = BuildConfig.VERSION_NAME,
+                    isSearching = isSearching,
+                    errorMessage = setupError,
+                    results = results,
+                    onSearch = { query ->
+                        scope.launch {
+                            isSearching = true
+                            setupError = null
+                            runCatching { api.searchMasjids(query) }
+                                .onSuccess { response ->
+                                    results = response.results
+                                    if (results.isEmpty()) setupError = "No approved masjid or surau matched your search."
                                 }
-                                .onFailure { pairingMessage = friendlyConnectionError(it) }
-                            isChecking = false
+                                .onFailure { setupError = friendlyConnectionError(it) }
+                            isSearching = false
                         }
                     },
-                    onCancel = {
-                        pairing = null
-                        pairingMessage = null
+                    onSelect = { masjid ->
+                        scope.launch {
+                            isSearching = true
+                            setupError = null
+                            runCatching {
+                                api.requestPairing(
+                                    masjid.id,
+                                    PairingRequestBody("${Build.MANUFACTURER} ${Build.MODEL}".trim())
+                                )
+                            }.onSuccess { request ->
+                                pairing = request
+                                pairingMessage = "Waiting for an administrator to approve this TV."
+                            }.onFailure { setupError = friendlyConnectionError(it) }
+                            isSearching = false
+                        }
                     }
                 )
-            } ?: SetupScreen(
-                appVersion = BuildConfig.VERSION_NAME,
-                isSearching = isSearching,
-                errorMessage = setupError,
-                results = results,
-                onSearch = { query ->
-                    scope.launch {
-                        isSearching = true
-                        setupError = null
-                        runCatching { api.searchMasjids(query) }
-                            .onSuccess { response ->
-                                results = response.results
-                                if (results.isEmpty()) setupError = "No approved masjid or surau matched your search."
+
+                if (showUpdateDialog) {
+                    AlertDialog(
+                        onDismissRequest = { if (!isUpdating) snoozeUpdate() },
+                        title = { Text("Kemas kini aplikasi", fontWeight = FontWeight.Black) },
+                        text = {
+                            when {
+                                isUpdating -> Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    CircularProgressIndicator(Modifier.size(40.dp))
+                                    Spacer(Modifier.height(12.dp))
+                                    Text("Memuat turun versi baru…", textAlign = TextAlign.Center)
+                                }
+                                needsInstallPermission -> Text(
+                                    "Sila benarkan 'Sumber tidak diketahui' untuk aplikasi ini supaya TV boleh memasang kemas kini automatik.",
+                                    textAlign = TextAlign.Center
+                                )
+                                updateInfo != null -> Column(Modifier.fillMaxWidth()) {
+                                    Text("Versi v${updateInfo!!.versionName} tersedia.", fontWeight = FontWeight.Bold)
+                                    if (!updateInfo!!.releaseNotes.isNullOrBlank()) {
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(updateInfo!!.releaseNotes!!, color = Color.Gray)
+                                    }
+                                    Spacer(Modifier.height(12.dp))
+                                    Text("Muat turun dan pasang sekarang?")
+                                }
+                                else -> Text(updateNotice ?: "", textAlign = TextAlign.Center)
                             }
-                            .onFailure { setupError = friendlyConnectionError(it) }
-                        isSearching = false
-                    }
-                },
-                onSelect = { masjid ->
-                    scope.launch {
-                        isSearching = true
-                        setupError = null
-                        runCatching {
-                            api.requestPairing(
-                                masjid.id,
-                                PairingRequestBody("${Build.MANUFACTURER} ${Build.MODEL}".trim())
-                            )
-                        }.onSuccess { request ->
-                            pairing = request
-                            pairingMessage = "Waiting for an administrator to approve this TV."
-                        }.onFailure { setupError = friendlyConnectionError(it) }
-                        isSearching = false
-                    }
+                        },
+                        confirmButton = {
+                            when {
+                                isUpdating -> {}
+                                needsInstallPermission -> TextButton(onClick = { openInstallPermissionSettings() }) { Text("Buka tetapan") }
+                                updateInfo != null -> Button(onClick = { startUpdate(scope, updater, updateInfo!!) }) { Text("Kemaskini") }
+                                else -> TextButton(onClick = { snoozeUpdate() }) { Text("Tutup") }
+                            }
+                        },
+                        dismissButton = {
+                            when {
+                                isUpdating -> {}
+                                needsInstallPermission || updateInfo != null -> TextButton(onClick = { snoozeUpdate() }) { Text("Nanti") }
+                                else -> {}
+                            }
+                        }
+                    )
                 }
-            )
+            }
         }
     }
 
@@ -361,6 +468,64 @@ class MainActivity : ComponentActivity() {
         store.deviceToken = token
     }
 
+    private fun startUpdate(scope: kotlinx.coroutines.CoroutineScope, updater: AppUpdater, latest: AndroidUpdate) {
+        scope.launch {
+            isUpdating = true
+            updateNotice = null
+            try {
+                val file = File(cacheDir, "updates/bayandigital-update.apk")
+                updater.downloadApk(latest.apkUrl, file)
+                pendingApkFile = file
+                updateInfo = null
+                isUpdating = false
+                installApk(file)
+            } catch (error: CancellationException) {
+                isUpdating = false
+                throw error
+            } catch (error: Throwable) {
+                isUpdating = false
+                updateNotice = "Muat turun kemas kini gagal. Cuba lagi kemudian."
+            }
+        }
+    }
+
+    private fun installApk(apkFile: File) {
+        if (!packageManager.canRequestPackageInstalls()) {
+            needsInstallPermission = true
+            return
+        }
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", apkFile)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
+        }
+        runCatching { startActivity(intent) }
+            .onFailure {
+                updateNotice = "Tidak dapat membuka pemasang. Sila muat turun semula."
+                pendingApkFile = null
+            }
+    }
+
+    private fun openInstallPermissionSettings() {
+        runCatching {
+            enableInstallLauncher.launch(
+                Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
+            )
+        }.onFailure {
+            updateNotice = "Sila benarkan 'Sumber tidak diketahui' untuk aplikasi ini dalam tetapan TV."
+            needsInstallPermission = false
+        }
+    }
+
+    private fun snoozeUpdate() {
+        preferences.edit().putLong(KEY_SNOOZE_UNTIL, System.currentTimeMillis() + SNOOZE_MILLIS).apply()
+        updateInfo = null
+        updateNotice = null
+        needsInstallPermission = false
+        pendingApkFile = null
+    }
+
     private fun friendlyConnectionError(error: Throwable): String = when {
         error is HttpException && error.code() == 401 -> "This TV is not paired or its access was revoked."
         error is HttpException && error.code() == 403 -> "This request is not authorized."
@@ -378,6 +543,9 @@ class MainActivity : ComponentActivity() {
         private const val CONNECTED_REFRESH_MILLIS = 60_000L
         private const val OFFLINE_RETRY_MILLIS = 30_000L
         private const val AZAN_ALERT_SECONDS = 30L
+        private const val UPDATE_CHECK_MILLIS = 6 * 60 * 60 * 1000L
+        private const val SNOOZE_MILLIS = 24 * 60 * 60 * 1000L
+        private const val KEY_SNOOZE_UNTIL = "update_snoozed_until"
         private val CLOCK_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
     }
 }

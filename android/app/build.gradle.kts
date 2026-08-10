@@ -5,9 +5,47 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+import java.util.Properties
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
+fun signingProperty(name: String): String? =
+    System.getenv(name) ?: keystoreProperties.getProperty(name)
+
+val releaseKeystorePath = signingProperty("ANDROID_KEYSTORE_PATH")
+val releaseKeystorePassword = signingProperty("ANDROID_KEYSTORE_PASSWORD")
+val releaseKeyAlias = signingProperty("ANDROID_KEY_ALIAS")
+val releaseKeyPassword = signingProperty("ANDROID_KEY_PASSWORD")
+
 android {
     namespace = "com.bayandigital.masjidscreen"
     compileSdk = 35
+
+    signingConfigs {
+        create("release") {
+            if (releaseKeystorePath != null &&
+                releaseKeystorePassword != null &&
+                releaseKeyAlias != null &&
+                releaseKeyPassword != null
+            ) {
+                storeFile = file(releaseKeystorePath)
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
 
     buildFeatures {
         buildConfig = true
@@ -22,8 +60,8 @@ android {
         applicationId = "com.bayandigital.masjidscreen"
         minSdk = 26
         targetSdk = 35
-        versionCode = 15
-        versionName = "0.11.1"
+        versionCode = 16
+        versionName = "0.12.0"
     }
 }
 

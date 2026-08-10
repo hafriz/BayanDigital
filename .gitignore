@@ -2,6 +2,8 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+android/keystore/
+android/keystore.properties
 .env
 backend/.env
 backend/vendor/

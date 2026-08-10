@@ -37,13 +37,29 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
-      - name: Build debug APK
-        run: gradle :app:assembleDebug --no-daemon
+      - name: Prepare release signing key
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          echo "${ANDROID_KEYSTORE_BASE64}" | base64 -d > "${GITHUB_WORKSPACE}/android/release.jks"
+          {
+            echo "ANDROID_KEYSTORE_PATH=${GITHUB_WORKSPACE}/android/release.jks"
+            echo "ANDROID_KEYSTORE_PASSWORD=${ANDROID_KEYSTORE_PASSWORD}"
+            echo "ANDROID_KEY_ALIAS=${ANDROID_KEY_ALIAS}"
+            echo "ANDROID_KEY_PASSWORD=${ANDROID_KEY_PASSWORD}"
+          } >> "${GITHUB_ENV}"
+      - name: Build release APK
+        run: gradle :app:assembleRelease --no-daemon
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: masjid-smart-screen-tv-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: masjid-smart-screen-tv-release
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -59,7 +75,7 @@ jobs:
       - name: Download built APK
         uses: actions/download-artifact@v4
         with:
-          name: masjid-smart-screen-tv-debug
+          name: masjid-smart-screen-tv-release
           path: build/android-apk
 
       - name: Publish latest Android TV release
@@ -69,7 +85,7 @@ jobs:
         run: |
           set -euo pipefail
           install -D -m 0644 \
-            build/android-apk/app-debug.apk \
+            build/android-apk/app-release.apk \
             build/release/masjid-smart-screen-tv.apk
           if gh release view android-tv-latest --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
             gh release upload android-tv-latest \
@@ -79,7 +95,7 @@ jobs:
             gh release create android-tv-latest \
               'build/release/masjid-smart-screen-tv.apk#bayanDigital Android TV APK' \
               --title 'bayanDigital Android TV — Latest' \
-              --notes 'Automatically built Android TV development release.' \
+              --notes 'Automatically built Android TV release.' \
               --latest=false --repo "${GITHUB_REPOSITORY}"
           fi
 
@@ -103,7 +119,7 @@ jobs:
       - name: Download built APK
         uses: actions/download-artifact@v4
         with:
-          name: masjid-smart-screen-tv-debug
+          name: masjid-smart-screen-tv-release
           path: build/android-apk
 
       - name: Install APK into the web application
@@ -111,7 +127,7 @@ jobs:
         run: |
           set -euo pipefail
           install -D -m 0644 \
-            build/android-apk/app-debug.apk \
+            build/android-apk/app-release.apk \
             backend/public/android/masjid-smart-screen-tv.apk
           test -s backend/public/android/masjid-smart-screen-tv.apk
 

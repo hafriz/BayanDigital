@@ -1,6 +1,6 @@
 {
-  "version_name": "0.11.1",
-  "version_code": 15,
-  "apk_url": "/android/masjid-smart-screen-tv.apk?v=15",
-  "release_notes": "Iqamah times now follow the selected 12h/24h time format on the dashboard and fullscreen views."
+  "version_name": "0.12.0",
+  "version_code": 16,
+  "apk_url": "/android/masjid-smart-screen-tv.apk?v=16",
+  "release_notes": "Added automatic in-app updates, iqamah times follow the 12h/24h format, and the app is now release-signed (updates install without uninstalling)."
 }
