@@ -4,7 +4,7 @@
 @section('top-action')<div class="actions-inline"><a class="button secondary" href="{{ route('admin.masjids.committee-members.index', $masjid) }}">Committee members</a>@if(auth()->user()->isAdmin())<a class="button secondary" href="{{ route('admin.masjids.devices.index', $masjid) }}">Paired TVs</a>@endif<a class="button" href="{{ route('admin.masjids.contents.index', $masjid) }}">Manage TV content</a></div>@endsection
 @section('content')
 <section class="panel"><div class="panel-body">
-    <form method="POST" action="{{ route('admin.masjids.update', $masjid) }}">@csrf @method('PUT')
+    <form method="POST" enctype="multipart/form-data" action="{{ route('admin.masjids.update', $masjid) }}">@csrf @method('PUT')
         <div class="form-grid">
             <div class="field"><label for="name">Display name</label><input id="name" name="name" value="{{ old('name', $masjid->name) }}" required></div>
             <div class="field"><label for="public_slug">Public portal slug</label><input id="public_slug" name="public_slug" value="{{ old('public_slug', $masjid->public_slug) }}" required><small>Public page: /masjid/{{ $masjid->public_slug }}</small></div>

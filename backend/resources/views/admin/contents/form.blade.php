@@ -3,13 +3,26 @@
 @section('subtitle', $masjid->name.' · '.$masjid->public_id)
 @section('content')
 <section class="panel"><div class="panel-body">
-    <form method="POST" action="{{ $content->exists ? route('admin.masjids.contents.update', [$masjid, $content]) : route('admin.masjids.contents.store', $masjid) }}">
+    <form method="POST" enctype="multipart/form-data" action="{{ $content->exists ? route('admin.masjids.contents.update', [$masjid, $content]) : route('admin.masjids.contents.store', $masjid) }}">
         @csrf @if($content->exists) @method('PUT') @endif
         <div class="form-grid">
             <div class="field"><label for="type">Content type</label><select id="type" name="type" required>@foreach(['announcement'=>'Announcement','schedule'=>'Ustaz schedule','ticker'=>'Running ticker','slide'=>'Slide','image'=>'Image'] as $value => $label)<option value="{{ $value }}" @selected(old('type', $content->type ?: 'announcement') === $value)>{{ $label }}</option>@endforeach</select></div>
             <div class="field"><label for="title">Title</label><input id="title" name="title" value="{{ old('title', $content->title) }}" maxlength="150"></div>
             <div class="field full"><label for="body">Message / description</label><textarea id="body" name="body" maxlength="2000">{{ old('body', $content->body) }}</textarea></div>
-            <div class="field full"><label for="media_path">Media / ustaz image URL</label><input id="media_path" name="media_path" value="{{ old('media_path', $content->media_path) }}" placeholder="https://…"><small>Used for image, slide, and ustaz schedule cards.</small></div>
+            <div class="field full" id="ustaz_photo_field">
+                <label for="ustaz_photo">Ustaz picture</label>
+                @if($content->type === 'schedule' && $content->media_path)
+                    <img id="ustaz_photo_preview" src="{{ str_starts_with($content->media_path, 'masjids/') ? Storage::disk('public')->url($content->media_path) : $content->media_path }}" alt="Current ustaz picture" style="display:block;width:140px;height:170px;object-fit:cover;border-radius:14px;margin:8px 0 12px">
+                @else
+                    <img id="ustaz_photo_preview" alt="Ustaz picture preview" style="display:none;width:140px;height:170px;object-fit:cover;border-radius:14px;margin:8px 0 12px">
+                @endif
+                <input id="ustaz_photo" name="ustaz_photo" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="ustaz_photo_help">
+                <small id="ustaz_photo_help">Upload a portrait JPG, PNG, or WebP image up to 2 MB. It will be shown beside the ustaz schedule on Android screens.</small>
+                @if($content->type === 'schedule' && $content->media_path)
+                    <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><input name="remove_ustaz_photo" type="checkbox" value="1" style="width:auto"> Remove current picture</label>
+                @endif
+            </div>
+            <div class="field full"><label for="media_path">Media URL (optional)</label><input id="media_path" name="media_path" value="{{ old('media_path', $content->media_path) }}" placeholder="https://…"><small>For slides and images, or as an alternative to uploading an ustaz picture.</small></div>
             <div class="field"><label for="starts_at">Starts at</label><input id="starts_at" name="starts_at" type="datetime-local" value="{{ old('starts_at', $content->starts_at?->format('Y-m-d\TH:i')) }}"></div>
             <div class="field"><label for="ends_at">Ends at</label><input id="ends_at" name="ends_at" type="datetime-local" value="{{ old('ends_at', $content->ends_at?->format('Y-m-d\TH:i')) }}"></div>
             <div class="field"><label for="is_active">Display status</label><select id="is_active" name="is_active"><option value="1" @selected((string) old('is_active', $content->exists ? (int)$content->is_active : 1) === '1')>Active</option><option value="0" @selected((string) old('is_active', $content->exists ? (int)$content->is_active : 1) === '0')>Disabled</option></select></div>
@@ -18,4 +31,12 @@
         <div class="form-actions"><button class="button" type="submit">{{ $content->exists ? 'Save content' : 'Add to screen' }}</button><a class="button secondary" href="{{ route('admin.masjids.contents.index', $masjid) }}">Cancel</a></div>
     </form>
 </div></section>
+<script>
+document.getElementById('ustaz_photo').addEventListener('change', function () {
+    const preview = document.getElementById('ustaz_photo_preview');
+    if (!this.files.length) return;
+    preview.src = URL.createObjectURL(this.files[0]);
+    preview.style.display = 'block';
+});
+</script>
 @endsection

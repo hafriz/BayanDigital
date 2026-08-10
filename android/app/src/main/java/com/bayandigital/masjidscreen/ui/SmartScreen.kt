@@ -113,12 +113,14 @@ fun SmartScreen(
     lastSuccessfulSyncMillis: Long? = null
 ) {
     val palette = paletteFor(payload.masjid.screenTheme)
+    val globalNotice = payload.announcements.firstOrNull { it.type == "global_notice" }
     Crossfade(targetState = state, animationSpec = tween(700), label = "screen-state") { screenState ->
         when (screenState) {
-            ScreenState.Idle -> if (nearPrayer || !payload.masjid.screenRotationEnabled) {
-                DashboardScreen(payload, currentTime, palette, connectionStatus, lastSuccessfulSyncMillis)
-            } else {
-                RotationCarousel(payload, currentTime, palette)
+            ScreenState.Idle -> when {
+                globalNotice != null -> GlobalNoticeScreen(globalNotice, payload.masjid.name, palette)
+                nearPrayer || !payload.masjid.screenRotationEnabled ->
+                    DashboardScreen(payload, currentTime, palette, connectionStatus, lastSuccessfulSyncMillis)
+                else -> RotationCarousel(payload, currentTime, palette)
             }
             is ScreenState.AzanAlert -> FullScreenMessage("AZAN", screenState.prayerName, palette.surface, palette.accent)
             is ScreenState.IqamahCountdown -> FullScreenMessage(
@@ -133,6 +135,28 @@ fun SmartScreen(
                 Color.Black,
                 palette.accent
             )
+        }
+    }
+}
+
+@Composable
+private fun GlobalNoticeScreen(notice: AnnouncementDto, masjidName: String, palette: ScreenPalette) {
+    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF3B0A0A), palette.background)))) {
+        AmbientPattern(palette)
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 72.dp, vertical = 54.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("NOTIS PENTING", color = palette.accent, fontSize = 24.sp, fontWeight = FontWeight.Black, letterSpacing = 4.sp)
+            Spacer(Modifier.height(24.dp))
+            Text(notice.title ?: "Makluman penting", color = Color.White, fontSize = 54.sp, lineHeight = 62.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+            if (!notice.body.isNullOrBlank()) {
+                Spacer(Modifier.height(22.dp))
+                Text(notice.body, color = Color(0xFFFFE4E1), fontSize = 27.sp, lineHeight = 38.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, maxLines = 7, overflow = TextOverflow.Ellipsis)
+            }
+            Spacer(Modifier.height(34.dp))
+            Text(masjidName, color = Color.White.copy(alpha = .65f), fontSize = 17.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -204,7 +228,7 @@ private fun DashboardScreen(
     val nextPrayer = calculateNextPrayer(prayers, currentTime)
     val displayTime = formatClock(currentTime, payload.masjid.timeFormat)
     val second = parseTime(currentTime)?.second ?: 0
-    val featuredItems = payload.announcements.filter { it.type == "announcement" }
+    val featuredItems = payload.announcements.filter { it.type == "global_notice" || it.type == "announcement" }
     val featureIndex = if (featuredItems.isEmpty()) 0 else (second / 10) % featuredItems.size
     val featured = featuredItems.getOrNull(featureIndex) ?: welcomeContent(payload.masjid.name)
     val schedules = payload.announcements.filter { it.type == "schedule" }
@@ -567,14 +591,17 @@ private fun ScheduleCard(content: AnnouncementDto, palette: ScreenPalette) {
             Spacer(Modifier.height(5.dp))
             Text(content.body.orEmpty(), color = palette.muted, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
-        if (!content.mediaPath.isNullOrBlank()) SubcomposeAsyncImage(
-            model = content.mediaPath,
-            contentDescription = content.title,
-            modifier = Modifier.width(82.dp).fillMaxHeight().clip(RoundedCornerShape(16.dp)),
-            contentScale = ContentScale.Crop,
-            loading = { VisualPlaceholder(palette) },
-            error = { VisualPlaceholder(palette) }
-        )
+        if (!content.mediaPath.isNullOrBlank()) {
+            SubcomposeAsyncImage(
+                model = content.mediaPath,
+                contentDescription = "Gambar ${content.title ?: "ustaz"}",
+                modifier = Modifier.width(112.dp).fillMaxHeight().clip(RoundedCornerShape(18.dp))
+                    .border(2.dp, palette.accent.copy(alpha = .65f), RoundedCornerShape(18.dp)),
+                contentScale = ContentScale.Crop,
+                loading = { VisualPlaceholder(palette) },
+                error = { VisualPlaceholder(palette) }
+            )
+        }
     }
 }
 
@@ -802,6 +829,7 @@ private fun formatTimer(seconds: Long): String {
 private fun countdownProgress(seconds: Long): Float = (1f - (seconds.coerceAtMost(14_400).toFloat() / 14_400f)).coerceIn(.08f, 1f)
 
 private fun contentTypeLabel(type: String): String = when (type) {
+    "global_notice" -> "NOTIS PENTING"
     "donation" -> "SUMBANGAN"
     "schedule" -> "JADUAL USTAZ"
     "slide" -> "MAKLUMAT"
@@ -810,6 +838,7 @@ private fun contentTypeLabel(type: String): String = when (type) {
 }
 
 private fun contentDefaultTitle(type: String): String = when (type) {
+    "global_notice" -> "Notis penting"
     "schedule" -> "Jadual ustaz"
     "slide" -> "Maklumat komuniti"
     "image" -> "Galeri masjid"
