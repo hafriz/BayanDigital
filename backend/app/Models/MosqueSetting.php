@@ -41,7 +41,7 @@ class MosqueSetting extends Model
         'wake_before_subuh_minutes',
         'screen_rotation_enabled',
         'rotation_views',
-        'rotation_duration_minutes',
+        'rotation_duration_seconds',
         'rotation_near_prayer_minutes',
         'clock_style',
     ];
@@ -58,7 +58,7 @@ class MosqueSetting extends Model
         'wake_before_subuh_minutes' => 'integer',
         'screen_rotation_enabled' => 'boolean',
         'rotation_views' => 'array',
-        'rotation_duration_minutes' => 'integer',
+        'rotation_duration_seconds' => 'integer',
         'rotation_near_prayer_minutes' => 'integer',
     ];
 

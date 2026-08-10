@@ -13,6 +13,14 @@ mkdir -p \
     "${APP_DIR}/bootstrap/cache"
 chown -R www-data:www-data "${APP_DIR}/storage" "${APP_DIR}/bootstrap/cache"
 
+# ── Link the public storage directory ────────────────────────────────────────
+# The public/ tree is read-only in the image while uploaded files live in the
+# persistent storage volume, so expose storage/app/public through public/storage.
+if [ ! -L "${APP_DIR}/public/storage" ] && [ ! -d "${APP_DIR}/public/storage" ]; then
+    mkdir -p "${APP_DIR}/storage/app/public"
+    ln -s "${APP_DIR}/storage/app/public" "${APP_DIR}/public/storage"
+fi
+
 # ── Wait for MySQL ────────────────────────────────────────────────────────────
 DB_HOST="${DB_HOST:-mariadb}"
 DB_PORT="${DB_PORT:-3306}"

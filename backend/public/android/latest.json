@@ -1,6 +1,6 @@
 {
-  "version_name": "0.10.2",
-  "version_code": 13,
-  "apk_url": "/android/masjid-smart-screen-tv.apk?v=13",
-  "release_notes": "Removes Syuruk from the on-screen prayer timeline and fullscreen Jadual Solat view."
+  "version_name": "0.11.0",
+  "version_code": 14,
+  "apk_url": "/android/masjid-smart-screen-tv.apk?v=14",
+  "release_notes": "Fullscreen view rotation is now configurable in seconds, with new Maklumat (slide) and Galeri (image) views."
 }

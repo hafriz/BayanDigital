@@ -166,6 +166,8 @@ private sealed interface RotationView {
     data object Announcements : RotationView
     data object Schedule : RotationView
     data object Donation : RotationView
+    data object Slides : RotationView
+    data object Gallery : RotationView
 }
 
 @Composable
@@ -177,11 +179,12 @@ private fun RotationCarousel(payload: PrayerResponse, currentTime: String, palet
     }
 
     var index by remember(views) { mutableIntStateOf(0) }
-    val durationMinutes = payload.masjid.rotationDurationMinutes.coerceIn(1, 60)
-    LaunchedEffect(views) {
+    val durationSeconds = (payload.masjid.rotationDurationSeconds ?: payload.masjid.rotationDurationMinutes * 60)
+        .coerceIn(1, 3600)
+    LaunchedEffect(views, durationSeconds) {
         index = 0
         while (views.size > 1) {
-            delay(durationMinutes * 60_000L)
+            delay(durationSeconds * 1000L)
             index = (index + 1) % views.size
         }
     }
@@ -199,6 +202,8 @@ private fun RotationCarousel(payload: PrayerResponse, currentTime: String, palet
             RotationView.Announcements -> FullscreenAnnouncements(payload, palette)
             RotationView.Schedule -> FullscreenPrayerSchedule(payload, palette)
             RotationView.Donation -> FullscreenDonation(payload, palette)
+            RotationView.Slides -> FullscreenImageRotation(payload, palette, "slide", "MAKLUMAT")
+            RotationView.Gallery -> FullscreenImageRotation(payload, palette, "image", "GALERI")
         }
     }
 }
@@ -212,6 +217,8 @@ private fun buildRotationViews(payload: PrayerResponse): List<RotationView> {
         if ("donation" in wanted &&
             (!payload.masjid.donationQrUrl.isNullOrBlank() || !payload.masjid.donationCaption.isNullOrBlank())
         ) add(RotationView.Donation)
+        if ("slides" in wanted && payload.announcements.any { it.type == "slide" }) add(RotationView.Slides)
+        if ("gallery" in wanted && payload.announcements.any { it.type == "image" }) add(RotationView.Gallery)
     }
 }
 
@@ -1056,6 +1063,88 @@ private fun FullscreenDonation(payload: PrayerResponse, palette: ScreenPalette) 
                 payload.masjid.donationAccount?.takeIf { it.isNotBlank() }?.let {
                     Spacer(Modifier.height(16.dp))
                     Text(it, color = palette.accent, fontSize = 28.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FullscreenImageRotation(
+    payload: PrayerResponse,
+    palette: ScreenPalette,
+    contentType: String,
+    heading: String
+) {
+    val items = payload.announcements.filter { it.type == contentType }
+    if (items.isEmpty()) return
+    var index by remember(items) { mutableIntStateOf(0) }
+    LaunchedEffect(items) {
+        index = 0
+        while (items.size > 1) {
+            delay(12_000)
+            index = (index + 1) % items.size
+        }
+    }
+
+    AnimatedContent(
+        targetState = items[index],
+        transitionSpec = { fadeIn(tween(600)) togetherWith fadeOut(tween(600)) },
+        label = "$contentType-rotate"
+    ) { content ->
+        Box(Modifier.fillMaxSize().background(palette.background).padding(40.dp)) {
+            AmbientPattern(palette)
+            Box(
+                Modifier.fillMaxSize().clip(RoundedCornerShape(28.dp))
+                    .background(palette.surface.copy(alpha = .9f))
+                    .border(1.dp, palette.text.copy(alpha = .08f), RoundedCornerShape(28.dp))
+            ) {
+                if (!content.mediaPath.isNullOrBlank()) {
+                    SubcomposeAsyncImage(
+                        model = content.mediaPath,
+                        contentDescription = content.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit,
+                        loading = { VisualPlaceholder(palette) },
+                        error = { VisualPlaceholder(palette) }
+                    )
+                } else {
+                    VisualPlaceholder(palette)
+                }
+                Column(Modifier.align(Alignment.TopStart).padding(18.dp)) {
+                    Box(
+                        Modifier.clip(RoundedCornerShape(8.dp))
+                            .background(palette.background.copy(alpha = .85f))
+                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                    ) {
+                        Text(heading, color = palette.accent, fontSize = 14.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                    }
+                }
+                Row(
+                    Modifier.align(Alignment.TopEnd).padding(22.dp),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    repeat(items.size) { i ->
+                        Box(
+                            Modifier.width(if (i == index) 22.dp else 8.dp).height(8.dp).clip(CircleShape)
+                                .background(if (i == index) palette.accent else Color.White.copy(alpha = .45f))
+                        )
+                    }
+                }
+                if (!content.title.isNullOrBlank() || !content.body.isNullOrBlank()) {
+                    Column(
+                        Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, palette.background.copy(alpha = .96f))))
+                            .padding(26.dp)
+                    ) {
+                        if (!content.title.isNullOrBlank()) {
+                            Text(content.title, color = Color.White, fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
+                        if (!content.body.isNullOrBlank()) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(content.body, color = Color.White.copy(alpha = .82f), fontSize = 17.sp, lineHeight = 24.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
                 }
             }
         }
