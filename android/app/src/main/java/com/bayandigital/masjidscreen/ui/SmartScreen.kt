@@ -162,6 +162,7 @@ private fun GlobalNoticeScreen(notice: AnnouncementDto, masjidName: String, pale
 }
 
 private sealed interface RotationView {
+    data object Main : RotationView
     data object Clock : RotationView
     data object Announcements : RotationView
     data object Schedule : RotationView
@@ -179,12 +180,15 @@ private fun RotationCarousel(payload: PrayerResponse, currentTime: String, palet
     }
 
     var index by remember(views) { mutableIntStateOf(0) }
-    val durationSeconds = (payload.masjid.rotationDurationSeconds ?: payload.masjid.rotationDurationMinutes * 60)
+    val baseDurationSeconds = (payload.masjid.rotationDurationSeconds ?: payload.masjid.rotationDurationMinutes * 60)
         .coerceIn(1, 3600)
-    LaunchedEffect(views, durationSeconds) {
+    val mainDurationSeconds = baseDurationSeconds.coerceAtLeast(60)
+    LaunchedEffect(views, baseDurationSeconds, mainDurationSeconds) {
         index = 0
         while (views.size > 1) {
-            delay(durationSeconds * 1000L)
+            val current = views[index]
+            val stayMillis = (if (current is RotationView.Main) mainDurationSeconds else baseDurationSeconds) * 1000L
+            delay(stayMillis)
             index = (index + 1) % views.size
         }
     }
@@ -198,6 +202,7 @@ private fun RotationCarousel(payload: PrayerResponse, currentTime: String, palet
         label = "rotation-view"
     ) { view ->
         when (view) {
+            RotationView.Main -> DashboardScreen(payload, currentTime, palette, ScreenConnectionStatus.Connected, null)
             RotationView.Clock -> FullscreenClock(payload, currentTime, palette)
             RotationView.Announcements -> FullscreenAnnouncements(payload, palette)
             RotationView.Schedule -> FullscreenPrayerSchedule(payload, palette)
@@ -211,6 +216,7 @@ private fun RotationCarousel(payload: PrayerResponse, currentTime: String, palet
 private fun buildRotationViews(payload: PrayerResponse): List<RotationView> {
     val wanted = payload.masjid.rotationViews
     return buildList {
+        if ("main" in wanted) add(RotationView.Main)
         if ("clock" in wanted) add(RotationView.Clock)
         if ("announcements" in wanted && payload.announcements.any { it.type == "announcement" }) add(RotationView.Announcements)
         if ("schedule" in wanted) add(RotationView.Schedule)

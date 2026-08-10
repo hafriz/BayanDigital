@@ -40,6 +40,7 @@ data class MasjidDto(
     @SerialName("rotation_duration_seconds") val rotationDurationSeconds: Int? = null,
     @SerialName("rotation_duration_minutes") val rotationDurationMinutes: Int = 3,
     @SerialName("rotation_near_prayer_minutes") val rotationNearPrayerMinutes: Int = 30,
+    @SerialName("rotation_after_prayer_minutes") val rotationAfterPrayerMinutes: Int = 15,
     @SerialName("clock_style") val clockStyle: String = "standard"
 )
 

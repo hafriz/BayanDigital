@@ -1,6 +1,6 @@
 {
-  "version_name": "0.12.0",
-  "version_code": 16,
-  "apk_url": "/android/masjid-smart-screen-tv.apk?v=16",
-  "release_notes": "Added automatic in-app updates, iqamah times follow the 12h/24h format, and the app is now release-signed (updates install without uninstalling)."
+  "version_name": "0.12.1",
+  "version_code": 17,
+  "apk_url": "/android/masjid-smart-screen-tv.apk?v=17",
+  "release_notes": "Added the main dashboard to fullscreen rotation (minimum 1 minute) and delay rotation until 15 minutes after prayer."
 }

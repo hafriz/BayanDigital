@@ -374,10 +374,11 @@ class MainActivity : ComponentActivity() {
         val date = runCatching { LocalDate.parse(payload.date.gregorian) }.getOrDefault(LocalDate.now())
         val now = LocalDateTime.of(date, parseClock(clock))
         val window = payload.masjid.rotationNearPrayerMinutes.coerceAtLeast(0).toLong()
+        val afterPrayer = payload.masjid.rotationAfterPrayerMinutes.coerceAtLeast(0).toLong()
         val occurrences = prayerOccurrences(payload)
 
         val inPrayerWindow = occurrences.any { (_, _, azan, iqamah) ->
-            !now.isBefore(azan) && now.isBefore(iqamah.plusMinutes(payload.masjid.silentModeMinutes.toLong()))
+            !now.isBefore(azan) && now.isBefore(iqamah.plusMinutes(payload.masjid.silentModeMinutes.toLong() + afterPrayer))
         }
         if (inPrayerWindow) return true
 

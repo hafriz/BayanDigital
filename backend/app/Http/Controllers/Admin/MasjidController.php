@@ -105,9 +105,10 @@ class MasjidController extends Controller
             'wake_before_subuh_minutes' => ['required', 'integer', 'min:0', 'max:180'],
             'screen_rotation_enabled' => ['required', 'boolean'],
             'rotation_views' => ['nullable', 'array'],
-            'rotation_views.*' => ['string', Rule::in(['clock', 'announcements', 'schedule', 'donation', 'slides', 'gallery'])],
+            'rotation_views.*' => ['string', Rule::in(['main', 'clock', 'announcements', 'schedule', 'donation', 'slides', 'gallery'])],
             'rotation_duration_seconds' => ['required', 'integer', 'min:1', 'max:3600'],
             'rotation_near_prayer_minutes' => ['required', 'integer', 'min:5', 'max:180'],
+            'rotation_after_prayer_minutes' => ['required', 'integer', 'min:0', 'max:180'],
             'clock_style' => ['required', Rule::in(['standard', 'big'])],
         ]);
 

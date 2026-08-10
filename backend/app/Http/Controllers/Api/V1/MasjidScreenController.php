@@ -98,10 +98,11 @@ class MasjidScreenController extends Controller
                 'screen_rotation_enabled' => (bool) $settings->screen_rotation_enabled,
                 'rotation_views' => is_array($settings->rotation_views)
                     ? array_values(array_filter($settings->rotation_views))
-                    : ['clock', 'announcements', 'schedule', 'donation'],
+                    : ['main', 'clock', 'announcements', 'schedule', 'donation'],
                 'rotation_duration_seconds' => (int) ($settings->rotation_duration_seconds ?? 180),
                 'rotation_duration_minutes' => max(1, (int) round(($settings->rotation_duration_seconds ?? 180) / 60)),
                 'rotation_near_prayer_minutes' => (int) ($settings->rotation_near_prayer_minutes ?? 30),
+                'rotation_after_prayer_minutes' => (int) ($settings->rotation_after_prayer_minutes ?? 15),
                 'clock_style' => $settings->clock_style ?: 'standard',
             ],
             'date' => [

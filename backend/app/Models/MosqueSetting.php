@@ -43,6 +43,7 @@ class MosqueSetting extends Model
         'rotation_views',
         'rotation_duration_seconds',
         'rotation_near_prayer_minutes',
+        'rotation_after_prayer_minutes',
         'clock_style',
     ];
 
@@ -60,6 +61,7 @@ class MosqueSetting extends Model
         'rotation_views' => 'array',
         'rotation_duration_seconds' => 'integer',
         'rotation_near_prayer_minutes' => 'integer',
+        'rotation_after_prayer_minutes' => 'integer',
     ];
 
     public function screenContents(): HasMany
