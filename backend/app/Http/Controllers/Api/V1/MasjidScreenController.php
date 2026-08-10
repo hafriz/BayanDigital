@@ -116,7 +116,7 @@ class MasjidScreenController extends Controller
                     'type' => $content->type,
                     'title' => $content->title,
                     'body' => $content->body,
-                    'media_path' => $this->publicUrl($content->media_path),
+                    'media_path' => $this->screenContentMediaUrl($content->media_path),
                 ])
                 ->concat($calendar->upcoming($settings))
                 ->values(),
@@ -134,5 +134,14 @@ class MasjidScreenController extends Controller
         return str_starts_with($path, 'http://') || str_starts_with($path, 'https://')
             ? $path
             : url('/'.ltrim($path, '/'));
+    }
+
+    private function screenContentMediaUrl(?string $path): ?string
+    {
+        if (is_string($path) && str_starts_with($path, 'masjids/')) {
+            return $this->publicUrl(Storage::disk('public')->url($path));
+        }
+
+        return $this->publicUrl($path);
     }
 }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\BackupController as AdminBackupController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\GlobalNoticeController as AdminGlobalNoticeController;
 use App\Http\Controllers\Admin\ManualController as AdminManualController;
 use App\Http\Controllers\Admin\MasjidController as AdminMasjidController;
 use App\Http\Controllers\Admin\MosqueCommitteeMemberController as AdminMosqueCommitteeMemberController;
@@ -46,6 +47,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('masjids/{masjid}/devices/{device}/revoke', [AdminScreenDeviceController::class, 'revoke'])->name('masjids.devices.revoke');
         });
         Route::middleware('admin')->resource('users', AdminUserController::class)->except(['show']);
+        Route::middleware('admin')->resource('global-notices', AdminGlobalNoticeController::class)->except(['show']);
         Route::middleware('admin')->prefix('backups')->name('backups.')->group(function () {
             Route::get('/', [AdminBackupController::class, 'index'])->name('index');
             Route::get('/connect', [AdminBackupController::class, 'connect'])->name('connect');

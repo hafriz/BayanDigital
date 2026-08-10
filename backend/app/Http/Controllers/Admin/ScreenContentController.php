@@ -8,6 +8,7 @@ use App\Models\ScreenContent;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ScreenContentController extends Controller
@@ -47,7 +48,25 @@ class ScreenContentController extends Controller
     public function store(Request $request, MosqueSetting $masjid): RedirectResponse
     {
         $this->authorizeMasjid($request, $masjid);
-        $masjid->screenContents()->create($this->validated($request));
+        $data = $this->validated($request);
+        $newPhoto = null;
+
+        if ($request->hasFile('ustaz_photo')) {
+            $newPhoto = $request->file('ustaz_photo')
+                ->store("masjids/{$masjid->public_id}/ustaz", 'public');
+            $data['media_path'] = $newPhoto;
+        }
+
+        unset($data['ustaz_photo'], $data['remove_ustaz_photo']);
+        try {
+            $masjid->screenContents()->create($data);
+        } catch (\Throwable $exception) {
+            if ($newPhoto) {
+                Storage::disk('public')->delete($newPhoto);
+            }
+
+            throw $exception;
+        }
 
         return redirect()->route('admin.masjids.contents.index', $masjid)->with('success', 'Screen content created.');
     }
@@ -64,7 +83,32 @@ class ScreenContentController extends Controller
     {
         $this->authorizeMasjid($request, $masjid);
         $this->ensureOwnedBy($masjid, $content);
-        $content->update($this->validated($request));
+        $data = $this->validated($request);
+        $oldPhoto = $this->uploadedPhotoPath($content->media_path);
+        $newPhoto = null;
+
+        if ($request->hasFile('ustaz_photo')) {
+            $newPhoto = $request->file('ustaz_photo')
+                ->store("masjids/{$masjid->public_id}/ustaz", 'public');
+            $data['media_path'] = $newPhoto;
+        } elseif ($request->boolean('remove_ustaz_photo')) {
+            $data['media_path'] = null;
+        }
+
+        unset($data['ustaz_photo'], $data['remove_ustaz_photo']);
+        try {
+            $content->update($data);
+        } catch (\Throwable $exception) {
+            if ($newPhoto) {
+                Storage::disk('public')->delete($newPhoto);
+            }
+
+            throw $exception;
+        }
+
+        if ($oldPhoto && $oldPhoto !== $content->media_path) {
+            Storage::disk('public')->delete($oldPhoto);
+        }
 
         return redirect()->route('admin.masjids.contents.index', $masjid)->with('success', 'Screen content updated.');
     }
@@ -73,6 +117,9 @@ class ScreenContentController extends Controller
     {
         $this->authorizeMasjid($request, $masjid);
         $this->ensureOwnedBy($masjid, $content);
+        if ($photo = $this->uploadedPhotoPath($content->media_path)) {
+            Storage::disk('public')->delete($photo);
+        }
         $content->delete();
 
         return redirect()->route('admin.masjids.contents.index', $masjid)->with('success', 'Screen content deleted.');
@@ -85,11 +132,18 @@ class ScreenContentController extends Controller
             'title' => ['nullable', 'string', 'max:150'],
             'body' => ['nullable', 'string', 'max:2000'],
             'media_path' => ['nullable', 'string', 'max:255'],
+            'ustaz_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_ustaz_photo' => ['nullable', 'boolean'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'is_active' => ['required', 'boolean'],
             'sort_order' => ['required', 'integer', 'min:0', 'max:10000'],
         ]);
+    }
+
+    private function uploadedPhotoPath(?string $path): ?string
+    {
+        return is_string($path) && str_starts_with($path, 'masjids/') ? $path : null;
     }
 
     private function ensureOwnedBy(MosqueSetting $masjid, ScreenContent $content): void
