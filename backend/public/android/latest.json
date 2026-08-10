@@ -1,6 +1,6 @@
 {
-  "version_name": "0.12.1",
-  "version_code": 17,
-  "apk_url": "/android/masjid-smart-screen-tv.apk?v=17",
-  "release_notes": "Added the main dashboard to fullscreen rotation (minimum 1 minute) and delay rotation until 15 minutes after prayer."
+  "version_name": "0.12.2",
+  "version_code": 18,
+  "apk_url": "/android/masjid-smart-screen-tv.apk?v=18",
+  "release_notes": "All Maklumat/Pengumuman items now rotate fully, Jadual Solat shows the zone, and day/month follow the mosque language."
 }

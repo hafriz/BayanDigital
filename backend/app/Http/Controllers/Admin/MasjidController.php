@@ -78,6 +78,7 @@ class MasjidController extends Controller
             'iqamah_minutes.isyak' => ['required', 'integer', 'min:0', 'max:120'],
             'screen_theme' => ['required', Rule::in(['emerald', 'midnight', 'sand', 'royal'])],
             'time_format' => ['required', Rule::in(['24h', '12h'])],
+            'language' => ['required', Rule::in(['ms', 'en'])],
             'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
             'use_default_logo' => ['nullable', 'boolean'],
             'donation_qr_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],

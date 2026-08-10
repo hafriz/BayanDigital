@@ -26,6 +26,7 @@ class MosqueSetting extends Model
         'silent_mode_minutes',
         'screen_theme',
         'time_format',
+        'language',
         'logo_url',
         'donation_qr_url',
         'donation_qr_image',

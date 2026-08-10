@@ -67,6 +67,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -164,11 +165,9 @@ private fun GlobalNoticeScreen(notice: AnnouncementDto, masjidName: String, pale
 private sealed interface RotationView {
     data object Main : RotationView
     data object Clock : RotationView
-    data object Announcements : RotationView
     data object Schedule : RotationView
     data object Donation : RotationView
-    data object Slides : RotationView
-    data object Gallery : RotationView
+    data class Content(val item: AnnouncementDto) : RotationView
 }
 
 @Composable
@@ -204,27 +203,32 @@ private fun RotationCarousel(payload: PrayerResponse, currentTime: String, palet
         when (view) {
             RotationView.Main -> DashboardScreen(payload, currentTime, palette, ScreenConnectionStatus.Connected, null)
             RotationView.Clock -> FullscreenClock(payload, currentTime, palette)
-            RotationView.Announcements -> FullscreenAnnouncements(payload, palette)
+            is RotationView.Content -> FullscreenContent(view.item, palette)
             RotationView.Schedule -> FullscreenPrayerSchedule(payload, palette)
             RotationView.Donation -> FullscreenDonation(payload, palette)
-            RotationView.Slides -> FullscreenImageRotation(payload, palette, "slide", "MAKLUMAT")
-            RotationView.Gallery -> FullscreenImageRotation(payload, palette, "image", "GALERI")
         }
     }
 }
 
 private fun buildRotationViews(payload: PrayerResponse): List<RotationView> {
     val wanted = payload.masjid.rotationViews
+    val contentTypes = buildList {
+        if ("announcements" in wanted) add("announcement")
+        if ("slides" in wanted) add("slide")
+        if ("gallery" in wanted) add("image")
+    }
     return buildList {
         if ("main" in wanted) add(RotationView.Main)
         if ("clock" in wanted) add(RotationView.Clock)
-        if ("announcements" in wanted && payload.announcements.any { it.type == "announcement" }) add(RotationView.Announcements)
+        contentTypes.forEach { type ->
+            payload.announcements.filter { it.type == type }.forEach { item ->
+                add(RotationView.Content(item))
+            }
+        }
         if ("schedule" in wanted) add(RotationView.Schedule)
         if ("donation" in wanted &&
             (!payload.masjid.donationQrUrl.isNullOrBlank() || !payload.masjid.donationCaption.isNullOrBlank())
         ) add(RotationView.Donation)
-        if ("slides" in wanted && payload.announcements.any { it.type == "slide" }) add(RotationView.Slides)
-        if ("gallery" in wanted && payload.announcements.any { it.type == "image" }) add(RotationView.Gallery)
     }
 }
 
@@ -380,7 +384,7 @@ private fun Masthead(payload: PrayerResponse, displayTime: String, palette: Scre
                 overflow = TextOverflow.Ellipsis
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(formatDisplayDate(payload.date.gregorian), color = palette.muted, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(formatDisplayDate(payload.date.gregorian, payload.masjid.language), color = palette.muted, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 Box(Modifier.padding(horizontal = 10.dp).size(4.dp).clip(CircleShape).background(palette.accent))
                 Text(payload.date.hijri.orEmpty(), color = palette.accent, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
@@ -824,8 +828,9 @@ private fun formatPrayerTime(value: String, format: String): String {
 private fun formatTimeOfDay(time: LocalTime?, format: String): String =
     time?.format(DateTimeFormatter.ofPattern(if (format == "12h") "h:mm a" else "HH:mm")) ?: "--:--"
 
-private fun formatDisplayDate(value: String): String = runCatching {
-    LocalDate.parse(value).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))
+private fun formatDisplayDate(value: String, language: String): String = runCatching {
+    val locale = if (language == "ms") Locale.forLanguageTag("ms-MY") else Locale.ENGLISH
+    LocalDate.parse(value).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale))
 }.getOrDefault(value)
 
 private fun formatLastSync(value: Long, timeFormat: String): String = runCatching {
@@ -906,7 +911,7 @@ private fun FullscreenClock(payload: PrayerResponse, currentTime: String, palett
             )
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(formatDisplayDate(payload.date.gregorian), color = palette.muted, fontSize = 22.sp, fontWeight = FontWeight.Medium)
+                Text(formatDisplayDate(payload.date.gregorian, payload.masjid.language), color = palette.muted, fontSize = 22.sp, fontWeight = FontWeight.Medium)
                 if (!payload.date.hijri.isNullOrBlank()) {
                     Box(Modifier.size(5.dp).clip(CircleShape).background(palette.accent))
                     Text(payload.date.hijri, color = palette.accent, fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -933,58 +938,75 @@ private fun FullscreenClock(payload: PrayerResponse, currentTime: String, palett
 }
 
 @Composable
-private fun FullscreenAnnouncements(payload: PrayerResponse, palette: ScreenPalette) {
-    val items = payload.announcements.filter { it.type == "announcement" }
-        .ifEmpty { listOf(welcomeContent(payload.masjid.name)) }
-    var index by remember(items) { mutableIntStateOf(0) }
-    LaunchedEffect(items) {
-        index = 0
-        while (items.size > 1) {
-            delay(15_000)
-            index = (index + 1) % items.size
-        }
-    }
-
-    AnimatedContent(
-        targetState = items[index],
-        transitionSpec = { fadeIn(tween(500)) togetherWith fadeOut(tween(500)) },
-        label = "announcement-rotate"
-    ) { content ->
-        Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(palette.background, palette.backgroundEnd))).padding(48.dp)) {
-            AmbientPattern(palette)
+private fun FullscreenContent(item: AnnouncementDto, palette: ScreenPalette) {
+    Box(
+        Modifier.fillMaxSize().background(Brush.linearGradient(listOf(palette.background, palette.backgroundEnd))).padding(48.dp)
+    ) {
+        AmbientPattern(palette)
+        if (!item.mediaPath.isNullOrBlank()) {
+            Box(
+                Modifier.fillMaxSize().clip(RoundedCornerShape(28.dp))
+                    .background(palette.surface.copy(alpha = .9f))
+                    .border(1.dp, palette.text.copy(alpha = .08f), RoundedCornerShape(28.dp))
+            ) {
+                SubcomposeAsyncImage(
+                    model = item.mediaPath,
+                    contentDescription = item.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                    loading = { VisualPlaceholder(palette) },
+                    error = { VisualPlaceholder(palette) }
+                )
+                Column(Modifier.align(Alignment.TopStart).padding(18.dp)) {
+                    Box(
+                        Modifier.clip(RoundedCornerShape(8.dp))
+                            .background(palette.background.copy(alpha = .85f))
+                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                    ) {
+                        Text(contentTypeLabel(item.type), color = palette.accent, fontSize = 14.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                    }
+                }
+                if (!item.title.isNullOrBlank() || !item.body.isNullOrBlank()) {
+                    Column(
+                        Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, palette.background.copy(alpha = .96f))))
+                            .padding(26.dp)
+                    ) {
+                        if (!item.title.isNullOrBlank()) {
+                            Text(item.title, color = Color.White, fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
+                        if (!item.body.isNullOrBlank()) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(item.body, color = Color.White.copy(alpha = .82f), fontSize = 17.sp, lineHeight = 24.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+        } else {
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                ContentBadge(content.type, palette)
+                ContentBadge(item.type, palette)
                 Spacer(Modifier.height(22.dp))
                 Text(
-                    content.title ?: contentDefaultTitle(content.type),
+                    item.title ?: contentDefaultTitle(item.type),
                     color = palette.text,
-                    fontSize = 58.sp,
-                    lineHeight = 66.sp,
+                    fontSize = 54.sp,
+                    lineHeight = 62.sp,
                     fontWeight = FontWeight.Black,
                     textAlign = TextAlign.Center,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (!content.body.isNullOrBlank()) {
+                if (!item.body.isNullOrBlank()) {
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        content.body,
+                        item.body,
                         color = palette.muted,
-                        fontSize = 28.sp,
-                        lineHeight = 38.sp,
+                        fontSize = 26.sp,
+                        lineHeight = 36.sp,
                         textAlign = TextAlign.Center,
                         maxLines = 4,
                         overflow = TextOverflow.Ellipsis
                     )
-                }
-                Spacer(Modifier.height(30.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    repeat(items.size) { i ->
-                        Box(
-                            Modifier.width(if (i == index) 30.dp else 10.dp).height(10.dp).clip(CircleShape)
-                                .background(if (i == index) palette.accent else palette.muted.copy(alpha = .3f))
-                        )
-                    }
                 }
             }
         }
@@ -998,7 +1020,21 @@ private fun FullscreenPrayerSchedule(payload: PrayerResponse, palette: ScreenPal
         AmbientPattern(palette)
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("JADUAL SOLAT", color = palette.accent, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
-            Spacer(Modifier.height(26.dp))
+            Spacer(Modifier.height(8.dp))
+            if (!payload.masjid.zoneName.isNullOrBlank()) {
+                Text(
+                    "${payload.masjid.zoneCode} · ${payload.masjid.zoneName}",
+                    color = palette.muted,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(26.dp))
+            } else {
+                Spacer(Modifier.height(26.dp))
+            }
             Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                 prayers.forEach { prayer ->
                     Column(
@@ -1072,88 +1108,6 @@ private fun FullscreenDonation(payload: PrayerResponse, palette: ScreenPalette) 
                 payload.masjid.donationAccount?.takeIf { it.isNotBlank() }?.let {
                     Spacer(Modifier.height(16.dp))
                     Text(it, color = palette.accent, fontSize = 28.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FullscreenImageRotation(
-    payload: PrayerResponse,
-    palette: ScreenPalette,
-    contentType: String,
-    heading: String
-) {
-    val items = payload.announcements.filter { it.type == contentType }
-    if (items.isEmpty()) return
-    var index by remember(items) { mutableIntStateOf(0) }
-    LaunchedEffect(items) {
-        index = 0
-        while (items.size > 1) {
-            delay(12_000)
-            index = (index + 1) % items.size
-        }
-    }
-
-    AnimatedContent(
-        targetState = items[index],
-        transitionSpec = { fadeIn(tween(600)) togetherWith fadeOut(tween(600)) },
-        label = "$contentType-rotate"
-    ) { content ->
-        Box(Modifier.fillMaxSize().background(palette.background).padding(40.dp)) {
-            AmbientPattern(palette)
-            Box(
-                Modifier.fillMaxSize().clip(RoundedCornerShape(28.dp))
-                    .background(palette.surface.copy(alpha = .9f))
-                    .border(1.dp, palette.text.copy(alpha = .08f), RoundedCornerShape(28.dp))
-            ) {
-                if (!content.mediaPath.isNullOrBlank()) {
-                    SubcomposeAsyncImage(
-                        model = content.mediaPath,
-                        contentDescription = content.title,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit,
-                        loading = { VisualPlaceholder(palette) },
-                        error = { VisualPlaceholder(palette) }
-                    )
-                } else {
-                    VisualPlaceholder(palette)
-                }
-                Column(Modifier.align(Alignment.TopStart).padding(18.dp)) {
-                    Box(
-                        Modifier.clip(RoundedCornerShape(8.dp))
-                            .background(palette.background.copy(alpha = .85f))
-                            .padding(horizontal = 12.dp, vertical = 7.dp)
-                    ) {
-                        Text(heading, color = palette.accent, fontSize = 14.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                    }
-                }
-                Row(
-                    Modifier.align(Alignment.TopEnd).padding(22.dp),
-                    horizontalArrangement = Arrangement.spacedBy(7.dp)
-                ) {
-                    repeat(items.size) { i ->
-                        Box(
-                            Modifier.width(if (i == index) 22.dp else 8.dp).height(8.dp).clip(CircleShape)
-                                .background(if (i == index) palette.accent else Color.White.copy(alpha = .45f))
-                        )
-                    }
-                }
-                if (!content.title.isNullOrBlank() || !content.body.isNullOrBlank()) {
-                    Column(
-                        Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                            .background(Brush.verticalGradient(listOf(Color.Transparent, palette.background.copy(alpha = .96f))))
-                            .padding(26.dp)
-                    ) {
-                        if (!content.title.isNullOrBlank()) {
-                            Text(content.title, color = Color.White, fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        }
-                        if (!content.body.isNullOrBlank()) {
-                            Spacer(Modifier.height(6.dp))
-                            Text(content.body, color = Color.White.copy(alpha = .82f), fontSize = 17.sp, lineHeight = 24.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
                 }
             }
         }

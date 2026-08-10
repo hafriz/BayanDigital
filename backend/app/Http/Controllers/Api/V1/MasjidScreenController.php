@@ -76,12 +76,14 @@ class MasjidScreenController extends Controller
                 'type' => $settings->type,
                 'name' => $settings->name,
                 'zone_code' => $settings->zone_code,
+                'zone_name' => $this->zoneName($settings->zone_code),
                 'iqamah_minutes' => $settings->iqamah_minutes ?? [],
                 'prayer_alerts_enabled' => (bool) $settings->prayer_alerts_enabled,
                 'pre_prayer_beep_minutes' => (int) $settings->pre_prayer_beep_minutes,
                 'silent_mode_minutes' => $settings->silent_mode_minutes,
                 'screen_theme' => $settings->screen_theme ?: 'emerald',
                 'time_format' => $settings->time_format ?: '24h',
+                'language' => $settings->language ?: 'ms',
                 'logo_url' => $logos->resolve($settings->logo_url),
                 'donation_qr_url' => $settings->donation_qr_image
                     ? $this->publicUrl(Storage::disk('public')->url($settings->donation_qr_image))
@@ -136,6 +138,21 @@ class MasjidScreenController extends Controller
         return str_starts_with($path, 'http://') || str_starts_with($path, 'https://')
             ? $path
             : url('/'.ltrim($path, '/'));
+    }
+
+    private function zoneName(?string $zoneCode): ?string
+    {
+        if (! $zoneCode) {
+            return null;
+        }
+
+        $code = strtoupper($zoneCode);
+        $zoneName = collect(config('jakim.zones', []))
+            ->map(fn (array $zones) => $zones[$code] ?? null)
+            ->filter()
+            ->first();
+
+        return $zoneName ?: null;
     }
 
     private function screenContentMediaUrl(?string $path): ?string
