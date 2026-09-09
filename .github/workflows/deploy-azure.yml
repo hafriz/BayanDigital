@@ -1,0 +1,85 @@
+name: Deploy backend to Azure App Service
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-azure.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: azure-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AZURE_WEBAPP_NAME: bayandigital
+  AZURE_WEBAPP_PACKAGE_PATH: backend
+  PHP_VERSION: '8.4'
+
+jobs:
+  deploy:
+    name: Deploy Laravel backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, curl, zip, bcmath, gd, intl, pdo_mysql, sodium
+          coverage: none
+
+      - name: Validate composer.json
+        working-directory: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+        run: composer validate --strict --no-check-publish
+
+      - name: Install dependencies
+        working-directory: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+        run: |
+          composer install --no-dev --no-interaction --no-progress --prefer-dist \
+            --no-scripts --no-plugins
+          composer dump-autoload --optimize
+
+      - name: Create runtime directories
+        working-directory: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+        run: |
+          mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+          touch storage/framework/cache/.gitkeep storage/framework/sessions/.gitkeep storage/framework/views/.gitkeep
+
+      - name: Remove non-deploy files from package
+        working-directory: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+        run: |
+          rm -f .env.example 2>/dev/null || true
+          [ -f .env ] && rm -f .env || true
+          rm -rf .git* 2>/dev/null || true
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+          type: zip
+          clean: true
+
+      - name: Post-deploy status
+        run: |
+          az webapp show \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group UstazMan \
+            --query "{state: state, defaultHostName: defaultHostName}" -o json
