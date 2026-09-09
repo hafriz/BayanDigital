@@ -64,6 +64,13 @@ jobs:
           [ -f .env ] && rm -f .env || true
           rm -rf .git* 2>/dev/null || true
 
+      - name: Package backend as zip
+        working-directory: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+        run: |
+          zip -rq ../bayan-digital-deploy.zip . \
+            -x "node_modules/*" \
+            -x ".github/*"
+
       - name: Azure login
         uses: azure/login@v2
         with:
@@ -73,7 +80,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+          package: bayan-digital-deploy.zip
           type: zip
           clean: true
 
