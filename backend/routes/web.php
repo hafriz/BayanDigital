@@ -1,35 +1,5 @@
 <?php
 
-use Illuminate\Support\Facades\DB;
-
-Route::get('/debug/ip', function () {
-    $probe = function (string $url) {
-        try {
-            return @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 8]]));
-        } catch (\Throwable $e) {
-            return 'ERR:' . $e->getMessage();
-        }
-    };
-    return response()->json([
-        'ipify' => trim((string) $probe('https://api.ipify.org')),
-        'ifconfig_me' => trim((string) $probe('https://ifconfig.me/ip')),
-        'php' => PHP_VERSION,
-        'server_addr' => $_SERVER['SERVER_ADDR'] ?? null,
-        'remote_addr' => $_SERVER['REMOTE_ADDR'] ?? null,
-    ]);
-})->name('debug.ip');
-
-Route::get('/debug/db', function () {
-    $result = ['ok' => false];
-    try {
-        $row = DB::select('SELECT 1 AS one, @@require_secure_transport AS tls, @@hostname AS hst');
-        $result = ['ok' => true, 'row' => $row[0] ?? null];
-    } catch (\Throwable $e) {
-        $result = ['ok' => false, 'class' => class_basename($e), 'message' => $e->getMessage(), 'code' => $e->getCode()];
-    }
-    return response()->json($result);
-})->name('debug.db');
-
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\BackupController as AdminBackupController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
