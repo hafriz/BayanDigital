@@ -34,6 +34,15 @@ class BackupController extends Controller
                 ->with('success', 'Google Drive connected successfully.');
         }
 
+        if (collect([
+            config('backup.google.client_id'),
+            config('backup.google.client_secret'),
+            config('backup.google.redirect_uri'),
+        ])->contains(fn (mixed $value) => blank($value))) {
+            return redirect()->route('admin.backups.index')
+                ->with('error', 'Google Drive is not configured. An administrator must set GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, and GOOGLE_DRIVE_REDIRECT_URI before connecting.');
+        }
+
         return redirect()->to($this->googleDrive->getAuthUrl());
     }
 
